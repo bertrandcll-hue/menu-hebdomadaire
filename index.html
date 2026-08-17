@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planificateur Multi-Familles Partagé 🍽️</title>
+    <title>Planificateur de Soupers Synchronisé 🍽️</title>
     <style>
         body { font-family: sans-serif; background-color: #f0f4f8; padding: 10px; color: #333; margin: 0; }
         .container { max-width: 1100px; margin: 0 auto; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -20,7 +20,6 @@
         
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 30px; }
         .card { background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px solid #ddd; border-top: 4px solid #3498db; display: flex; flex-direction: column; justify-content: space-between; }
-        .card-extra { border-top: 4px solid #f39c12; background: #fffcf7; }
         h3 { margin-top: 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 5px; font-size: 18px; }
         
         .repas-block { background: #f1f7fc; margin: 12px 0; padding: 14px 12px; border-radius: 6px; border-left: 4px solid #2980b9; }
@@ -47,14 +46,12 @@
 
 
 
-    
-
 
 <body>
-<!-- Écran d'accueil de Connexion -->
+<!-- Écran d'accueil pour taper le nom de la famille -->
 <div id="ecran-login" class="login-box">
     <h2 style="margin: 0; color: #2c3e50;">🔑 Accès Planificateur</h2>
-    <p style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">Entrez l'identifiant unique créé pour votre famille.</p>
+    <p style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">Entrez l'identifiant unique de votre famille pour synchroniser vos appareils.</p>
     <input type="text" id="input-code-famille" placeholder="Ex: famille-tremblay">
     <button class="btn-login" id="btn-login-action">Ouvrir notre menu</button>
 </div>
@@ -62,33 +59,36 @@
 <!-- Interface Principale (Masquée au démarrage) -->
 <div id="ecran-principal" class="container" style="display: none;">
     <div class="logout-zone">
-        <span>🏠 Espace Actif : <strong id="affichage-code-actif"></strong></span>
-        <button class="btn-logout" id="btn-logout-action">Se déconnecter</button>
+        <span>🏠 Espace Synchro : <strong id="affichage-code-actif"></strong></span>
+        <button class="btn-logout" id="btn-logout-action">Changer de famille</button>
     </div>
     <h1 id="titre-principal">Planificateur de Soupers</h1>
-    <p class="instruction">Les repas ajoutés vont dans les extras de TOUT LE MONDE. Échangez-les pour bâtir vos 6 semaines privées.</p>
+    <p class="instruction">Les repas ajoutés vont dans les extras. Vos choix sont automatiquement partagés entre vos appareils.</p>
     
     <div class="ajout-section">
         <input type="text" id="nouveauRepasNom" placeholder="Nom du repas (ex: Vol-au-vent)">
-        <button class="btn-ajouter" id="btn-ajouter-action">➕ Ajouter à la banque collective</button>
+        <button class="btn-ajouter" id="btn-ajouter-action">➕ Ajouter aux extras</button>
     </div>
 
-    <div id="loading" class="loading-text" style="display:none;">🔄 Raccordement cloud en direct sécurisé...</div>
+    <div id="loading" class="loading-text" style="display:none;">🔄 Synchronisation en direct avec le cloud...</div>
     <div id="menu-grid" class="grid"></div>
-    <div class="card card-extra"><h3>Banque de repas en extra (Partagée avec tous les amis)</h3><div id="extras-liste" class="extra-box"></div></div>
+    <div class="card" style="border-top: 4px solid #f39c12; background: #fffcf7;">
+        <h3>Ma banque de repas en extra</h3>
+        <div id="extras-liste" class="extra-box"></div>
+    </div>
 </div>
 
-<!-- Pop-up des Ingrédients d'un repas -->
+<!-- Boîte Ingrédients -->
 <div id="box-ingredients" class="modal">
     <div class="modal-box">
         <button class="btn-close" id="btn-fermer-ing-action">Fermer</button>
-        <h2 id="modal-titre" style="margin-top: 0; color: #2c3e50;">Ingrédients / Notes</h2>
-        <textarea id="modal-texte" placeholder="Écrivez les détails de la recette..."></textarea>
+        <h2 id="modal-titre" style="margin-top: 0; color: #2c3e50;">Ingrédients</h2>
+        <textarea id="modal-texte" placeholder="Liste des ingrédients..."></textarea>
         <button class="btn-action" id="btn-sauver-ing-action">💾 Enregistrer les détails</button>
     </div>
 </div>
 
-<!-- Pop-up de la Liste d'épicerie brute -->
+<!-- Boîte Épicerie -->
 <div id="box-epicerie" class="modal">
     <div class="modal-box">
         <button class="btn-close" id="btn-fermer-epi-action">Fermer</button>
@@ -96,6 +96,9 @@
         <div id="epicerie-corps" class="liste-resume"></div>
     </div>
 </div>
+
+
+
 
 
 
@@ -110,7 +113,7 @@
 
     let codeFamilleActif = "";
     let donneesFamille = { semaines: [], extras: [] };
-    let typePlatSelectionne = "", sIdxSelectionne = 0, rIdxSelectionne = 0, extraPlatNomSelectionne = "";
+    let typePlatSelectionne = "", sIdxSelectionne = 0, rIdxSelectionne = 0, extraIdxSelectionne = 0;
 
     const REPAS_DE_BASE = [
         [ {nom: "Pâté chinois", ing: ""}, {nom: "Poulet entier", ing: ""}, {nom: "Belogne rôti", ing: ""}, {nom: "Poke Bowl", ing: ""} ],
@@ -120,7 +123,7 @@
         [ {nom: "Spaghetti", ing: ""}, {nom: "Poulet rouge", ing: ""}, {nom: "Épaule de porc", ing: ""}, {nom: "Macaroni à la viande", ing: ""} ],
         [ {nom: "Pâte au boeuf à la coréenne", ing: ""}, {nom: "Poulet Parmigiana", ing: ""}, {nom: "Pâte Carbonara", ing: ""}, {nom: "Mac & Cheese", ing: ""} ]
     ];
-    const EXTRAS_DE_SECOURS = [
+    const EXTRAS_DE_BASE = [
         {nom: "Lasagne", ing: ""}, {nom: "Tortellini sauce rosée", ing: ""}, {nom: "Club sandwich", ing: ""}, 
         {nom: "Vol-au-vent", ing: ""}, {nom: "Burritos Bowl", ing: ""}, {nom: "Quesedillas", ing: ""}
     ];
@@ -154,31 +157,28 @@
         document.getElementById("loading").style.display = "block";
 
         try {
-            donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
-
-            // Lecture sécurisée du plan privé de 6 semaines
-            let rPlan = await fetch("https://jsonbin.io" + codeFamilleActif + "/latest", {
-                headers: { "X-Master-Key": MASTER_KEY }
+            // Lecture par nom de tiroir unique (Évite tous les plantages)
+            let res = await fetch("https://jsonbin.io", {
+                method: "GET",
+                headers: { "X-Master-Key": MASTER_KEY, "X-Bin-Name": "tiroir-" + codeFamilleActif }
             });
-            if (rPlan.ok) {
-                // CORRECTION DE SYNTAXE : Lecture fluide sans plantage de condition
-                let jP = await rPlan.json();
-                if (jP && jP.record && jP.record.semaines) { donneesFamille.semaines = jP.record.semaines; }
-            } else if (rPlan.status === 404) {
-                await sauvegarderPlanPrive();
-            }
-
-            // Lecture sécurisée de la banque d'extras commune
-            let rExtras = await fetch("https://jsonbin.io" + BIN_EXTRAS_COLLECTIF + "/latest", {
-                headers: { "X-Master-Key": MASTER_KEY }
-            });
-            if (rExtras.ok) {
-                let jE = await rExtras.json();
-                donneesFamille.extras = jE.record ? jE.record.extras : JSON.parse(JSON.stringify(EXTRAS_DE_SECOURS));
+            
+            if (!res.ok) {
+                // Si la famille n'existe pas encore dans votre compte, on injecte les données de base
+                donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
+                donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
+                await pousserVersCloud();
+            } else {
+                let json = await res.json();
+                // Lecture sécurisée de la liste renvoyée
+                if (json && json.record) {
+                    donneesFamille.semaines = json.record.semaines || JSON.parse(JSON.stringify(REPAS_DE_BASE));
+                    donneesFamille.extras = json.record.extras || JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
+                }
             }
         } catch(err) {
             donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
-            donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_SECOURS));
+            donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
         }
         document.getElementById("loading").style.display = "none";
         afficherInterface();
@@ -188,22 +188,13 @@
 
 
 
-        async function sauvegarderPlanPrive() {
+        async function pousserVersCloud() {
         try {
+            // Envoi et écrasement en direct sur le cloud de la famille connectée
             await fetch("https://jsonbin.io", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY, "X-Bin-Name": "plan-" + codeFamilleActif },
-                body: JSON.stringify({ semaines: donneesFamille.semaines })
-            });
-        } catch(e) {}
-    }
-
-    async function sauvegarderExtrasCollectifs() {
-        try {
-            await fetch("https://jsonbin.io/" + BIN_EXTRAS_COLLECTIF, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY },
-                body: JSON.stringify({ extras: donneesFamille.extras })
+                headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY, "X-Bin-Name": "tiroir-" + codeFamilleActif },
+                body: JSON.stringify(donneesFamille)
             });
         } catch(e) {}
     }
@@ -213,11 +204,12 @@
         let nom = nomInput.value.trim(); if (nom === "") return;
         document.getElementById("loading").style.display = "block";
         
-        donneesFamille.extras.push({ nom: nom, ing: "" }); 
+        donneesFamille.extras.push({ nom: nom, ing: "" });
         nomInput.value = "";
         
-        await sauvegarderExtrasCollectifs();
-        await chargerMenuDepuisCloud();
+        afficherInterface();
+        await pousserVersCloud();
+        document.getElementById("loading").style.display = "none";
     }
 
     async function changerRepas(sIdx, rIdx, select) {
@@ -228,14 +220,14 @@
         donneesFamille.semaines[sIdx][rIdx] = donneesFamille.extras[extraIdx];
         donneesFamille.extras[extraIdx] = actuelMenu;
         
-        await sauvegarderPlanPrive(); 
-        await sauvegarderExtrasCollectifs();
-        await chargerMenuDepuisCloud();
+        afficherInterface();
+        await pousserVersCloud();
+        document.getElementById("loading").style.display = "none";
     }
 
-    function ouvrirIngredients(type, s, r, nomPlat) {
-        typePlatSelectionne = type; sIdxSelectionne = s; rIdxSelectionne = r; extraPlatNomSelectionne = nomPlat;
-        let plat = (type === "semaine") ? donneesFamille.semaines[s][r] : donneesFamille.extras.find(e => e.nom === nomPlat);
+    function ouvrirIngredients(type, s, r, exIdx) {
+        typePlatSelectionne = type; sIdxSelectionne = s; rIdxSelectionne = r; extraIdxSelectionne = exIdx;
+        let plat = (type === "semaine") ? donneesFamille.semaines[s][r] : donneesFamille.extras[exIdx];
         document.getElementById("modal-titre").innerText = plat.nom;
         document.getElementById("modal-texte").value = plat.ing || "";
         document.getElementById("box-ingredients").style.display = "block";
@@ -244,14 +236,17 @@
     async function sauverIngredients() {
         let txt = document.getElementById("modal-texte").value.trim();
         document.getElementById("loading").style.display = "block";
+        
         if (typePlatSelectionne === "semaine") {
-            donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne].ing = txt; await sauvegarderPlanPrive();
+            donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne].ing = txt;
         } else {
-            let item = donneesFamille.extras.find(e => e.nom === extraPlatNomSelectionne);
-            if (item) item.ing = txt; await sauvegarderExtrasCollectifs();
+            donneesFamille.extras[extraIdxSelectionne].ing = txt;
         }
-        fermerFenetre(); 
-        await chargerMenuDepuisCloud();
+        
+        fermerFenetre();
+        afficherInterface();
+        await pousserVersCloud();
+        document.getElementById("loading").style.display = "none";
     }
 
     function genererEpicerieSemaine(sIdx) {
@@ -259,7 +254,7 @@
         let txt = "";
         donneesFamille.semaines[sIdx].forEach(repas => {
             if (repas && repas.nom) {
-                txt += "🔹 " + repas.nom.toUpperCase() + " :\n" + (repas.ing && repas.ing.trim() !== "" ? repas.ing.trim() + "\n" : "(Aucun ingrédient)\n") + "\n-----------------------\n\n";
+                txt += "🔹 " + repas.nom.toUpperCase() + " :\n" + (repas.ing && repas.ing.trim() !== "" ? repas.ing.trim() + "\n" : "(Aucun ingrédient inscrit)\n") + "\n-----------------------\n\n";
             }
         });
         document.getElementById("epicerie-corps").innerText = txt; document.getElementById("box-epicerie").style.display = "block";
@@ -291,25 +286,17 @@
         
         donneesFamille.semaines.forEach((semaine, sIdx) => {
             semaine.forEach((repas, rIdx) => {
-                document.getElementById(`nom-${sIdx}-${rIdx}`).addEventListener("click", () => abrirIngredients('semaine', sIdx, rIdx, ''));
+                document.getElementById(`nom-${sIdx}-${rIdx}`).addEventListener("click", () => ouvrirIngredients('semaine', sIdx, rIdx, 0));
                 document.getElementById(`sel-${sIdx}-${rIdx}`).addEventListener("change", (e) => changerRepas(sIdx, rIdx, e.target));
             });
             document.getElementById(`btn-epi-${sIdx}`).addEventListener("click", () => genererEpicerieSemaine(sIdx));
         });
 
         let extrasHtml = "";
-        donneesFamille.extras.forEach((ex, exIdx) => { 
-            if (ex && ex.nom) extrasHtml += '<div class="extra-item" id="ex-' + exIdx + '">' + ex.nom + '</div>'; 
-        });
+        donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) extrasHtml += '<div class="extra-item" id="ex-' + exIdx + '">' + ex.nom + '</div>'; });
         document.getElementById("extras-liste").innerHTML = extrasHtml;
-        
-        donneesFamille.extras.forEach((ex, exIdx) => { 
-            if (ex && ex.nom) document.getElementById('ex-' + exIdx).addEventListener("click", () => ouvrirIngredients('extra', 0, 0, ex.nom)); 
-        });
+        donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) document.getElementById('ex-' + exIdx).addEventListener("click", () => ouvrirIngredients('extra', 0, 0, exIdx)); });
     }
-    
-    // Correction de l'appel pour ouvrir l'interface de clic
-    window.abrirIngredients = ouvrirIngredients;
 </script>
 </body>
 </html>
