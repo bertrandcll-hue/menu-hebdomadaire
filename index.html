@@ -47,12 +47,8 @@
 
 
 
-
-
-    
-
 <body>
-<!-- Écran de Connexion Multi-Projets -->
+<!-- Écran d'accueil de Connexion -->
 <div id="ecran-login" class="login-box">
     <h2 style="margin: 0; color: #2c3e50;">🔑 Accès Planificateur</h2>
     <p style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">Entrez l'identifiant unique créé pour votre famille.</p>
@@ -60,7 +56,7 @@
     <button class="btn-login" id="btn-login-action">Ouvrir notre menu</button>
 </div>
 
-<!-- Interface Principale Cache au Départ -->
+<!-- Interface Principale (Masquée au démarrage) -->
 <div id="ecran-principal" class="container" style="display: none;">
     <div class="logout-zone">
         <span>🏠 Espace Actif : <strong id="affichage-code-actif"></strong></span>
@@ -74,11 +70,12 @@
         <button class="btn-ajouter" id="btn-ajouter-action">➕ Ajouter à la banque collective</button>
     </div>
 
-    <div id="loading" class="loading-text" style="display:none;">🔄 Raccordement sécurisé à la base cloud...</div>
+    <div id="loading" class="loading-text" style="display:none;">🔄 Raccordement cloud en direct sécurisé...</div>
     <div id="menu-grid" class="grid"></div>
     <div class="card card-extra"><h3>Banque de repas en extra (Partagée avec tous les amis)</h3><div id="extras-liste" class="extra-box"></div></div>
 </div>
 
+<!-- Pop-up des Ingrédients d'un repas -->
 <div id="box-ingredients" class="modal">
     <div class="modal-box">
         <button class="btn-close" id="btn-fermer-ing-action">Fermer</button>
@@ -88,6 +85,7 @@
     </div>
 </div>
 
+<!-- Pop-up de la Liste d'épicerie brute -->
 <div id="box-epicerie" class="modal">
     <div class="modal-box">
         <button class="btn-close" id="btn-fermer-epi-action">Fermer</button>
@@ -95,7 +93,6 @@
         <div id="epicerie-corps" class="liste-resume"></div>
     </div>
 </div>
-
 
 
 
@@ -119,6 +116,10 @@
         [ {nom: "Boulette M&M", ing: ""}, {nom: "Fajitas", ing: ""}, {nom: "Saucisses dans le sirop", ing: ""}, {nom: "Casserole de thon", ing: ""} ],
         [ {nom: "Spaghetti", ing: ""}, {nom: "Poulet rouge", ing: ""}, {nom: "Épaule de porc", ing: ""}, {nom: "Macaroni à la viande", ing: ""} ],
         [ {nom: "Pâte au boeuf à la coréenne", ing: ""}, {nom: "Poulet Parmigiana", ing: ""}, {nom: "Pâte Carbonara", ing: ""}, {nom: "Mac & Cheese", ing: ""} ]
+    ];
+    const EXTRAS_DE_SECOURS = [
+        {nom: "Lasagne", ing: ""}, {nom: "Tortellini sauce rosée", ing: ""}, {nom: "Club sandwich", ing: ""}, 
+        {nom: "Vol-au-vent", ing: ""}, {nom: "Burritos Bowl", ing: ""}, {nom: "Quesedillas", ing: ""}
     ];
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -150,34 +151,30 @@
         document.getElementById("loading").style.display = "block";
 
         try {
-            // SÉCURITÉ : On pré-remplit avec la base pour éviter l'écran blanc si la lecture échoue
             donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
 
-            // Lecture sécurisée du plan privé de la famille (par requêtes de métadonnées)
+            // Lecture sécurisée par nom de fichier du plan privé
             let rPlan = await fetch("https://jsonbin.io" + codeFamilleActif + "/latest", {
                 headers: { "X-Master-Key": MASTER_KEY }
             });
-            
             if (rPlan.ok) {
-                let jP = await rPlan.json();
-                if (jP && jP.record && jP.record.semaines) {
-                    donneesFamille.semaines = jP.record.semaines;
-                }
+                let jP = await rPlan.ok ? rPlan.json() : null;
+                if (jP && jP.record && jP.record.semaines) { donneesFamille.semaines = jP.record.semaines; }
             } else if (rPlan.status === 404) {
-                // Si c'est une toute nouvelle famille, on lui génère son premier fichier sur le cloud
                 await sauvegarderPlanPrive();
             }
 
-            // Lecture de la banque collective d'extras partagée par tous les amis
+            // Lecture sécurisée de l'ID de la banque commune d'extras
             let rExtras = await fetch("https://jsonbin.io" + BIN_EXTRAS_COLLECTIF + "/latest", {
                 headers: { "X-Master-Key": MASTER_KEY }
             });
             if (rExtras.ok) {
                 let jE = await rExtras.json();
-                donneesFamille.extras = jE.record ? jE.record.extras : [];
+                donneesFamille.extras = jE.record ? jE.record.extras : JSON.parse(JSON.stringify(EXTRAS_DE_SECOURS));
             }
         } catch(err) {
-            console.log("Mode local activé");
+            donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
+            donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_SECOURS));
         }
         document.getElementById("loading").style.display = "none";
         afficherInterface();
@@ -187,12 +184,10 @@
 
 
 
-    
 
 
 
-
-           async function sauvegarderPlanPrive() {
+        async function sauvegarderPlanPrive() {
         try {
             await fetch("https://jsonbin.io", {
                 method: "POST",
@@ -204,7 +199,7 @@
 
     async function sauvegarderExtrasCollectifs() {
         try {
-            // CORRECTION DE L'ADRESSE : Utilisation de PUT et de /latest pour jsonbin
+            // Utilisation impérative de PUT vers le Bin ID fixe pour écraser et synchroniser tout le monde en direct
             await fetch("https://jsonbin.io/" + BIN_EXTRAS_COLLECTIF, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY },
@@ -216,16 +211,26 @@
     async function ajouterNouveauRepas() {
         let nomInput = document.getElementById("nouveauRepasNom");
         let nom = nomInput.value.trim(); if (nom === "") return;
-        donneesFamille.extras.push({ nom: nom, ing: "" }); nomInput.value = "";
-        afficherInterface(); await sauvegarderExtrasCollectifs();
+        document.getElementById("loading").style.display = "block";
+        
+        donneesFamille.extras.push({ nom: nom, ing: "" }); 
+        nomInput.value = "";
+        
+        await sauvegarderExtrasCollectifs();
+        await chargerMenuDepuisCloud();
     }
 
     async function changerRepas(sIdx, rIdx, select) {
         let extraIdx = select.value; if (extraIdx === "") return;
         let actuelMenu = donneesFamille.semaines[sIdx][rIdx];
+        document.getElementById("loading").style.display = "block";
+        
         donneesFamille.semaines[sIdx][rIdx] = donneesFamille.extras[extraIdx];
         donneesFamille.extras[extraIdx] = actuelMenu;
-        afficherInterface(); await sauvegarderPlanPrive(); await sauvegarderExtrasCollectifs();
+        
+        await sauvegarderPlanPrive(); 
+        await sauvegarderExtrasCollectifs();
+        await chargerMenuDepuisCloud();
     }
 
     function ouvrirIngredients(type, s, r, nomPlat) {
@@ -245,7 +250,8 @@
             let item = donneesFamille.extras.find(e => e.nom === extraPlatNomSelectionne);
             if (item) item.ing = txt; await sauvegarderExtrasCollectifs();
         }
-        fermerFenetre(); afficherInterface();
+        fermerFenetre(); 
+        await chargerMenuDepuisCloud();
     }
 
     function genererEpicerieSemaine(sIdx) {
@@ -293,7 +299,6 @@
 
         let extrasHtml = "";
         donneesFamille.extras.forEach((ex, exIdx) => { 
-            // CORRECTION DES GUILLEMETS : Concaténation de texte certifiée sans bug de backtick
             if (ex && ex.nom) extrasHtml += '<div class="extra-item" id="ex-' + exIdx + '">' + ex.nom + '</div>'; 
         });
         document.getElementById("extras-liste").innerHTML = extrasHtml;
@@ -305,3 +310,21 @@
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+
