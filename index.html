@@ -47,6 +47,9 @@
 
 
 
+    
+
+
 <body>
 <!-- Écran d'accueil de Connexion -->
 <div id="ecran-login" class="login-box">
@@ -153,18 +156,19 @@
         try {
             donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
 
-            // Lecture sécurisée par nom de fichier du plan privé
+            // Lecture sécurisée du plan privé de 6 semaines
             let rPlan = await fetch("https://jsonbin.io" + codeFamilleActif + "/latest", {
                 headers: { "X-Master-Key": MASTER_KEY }
             });
             if (rPlan.ok) {
-                let jP = await rPlan.ok ? rPlan.json() : null;
+                // CORRECTION DE SYNTAXE : Lecture fluide sans plantage de condition
+                let jP = await rPlan.json();
                 if (jP && jP.record && jP.record.semaines) { donneesFamille.semaines = jP.record.semaines; }
             } else if (rPlan.status === 404) {
                 await sauvegarderPlanPrive();
             }
 
-            // Lecture sécurisée de l'ID de la banque commune d'extras
+            // Lecture sécurisée de la banque d'extras commune
             let rExtras = await fetch("https://jsonbin.io" + BIN_EXTRAS_COLLECTIF + "/latest", {
                 headers: { "X-Master-Key": MASTER_KEY }
             });
@@ -184,9 +188,6 @@
 
 
 
-
-
-
         async function sauvegarderPlanPrive() {
         try {
             await fetch("https://jsonbin.io", {
@@ -199,7 +200,6 @@
 
     async function sauvegarderExtrasCollectifs() {
         try {
-            // Utilisation impérative de PUT vers le Bin ID fixe pour écraser et synchroniser tout le monde en direct
             await fetch("https://jsonbin.io/" + BIN_EXTRAS_COLLECTIF, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY },
@@ -291,7 +291,7 @@
         
         donneesFamille.semaines.forEach((semaine, sIdx) => {
             semaine.forEach((repas, rIdx) => {
-                document.getElementById(`nom-${sIdx}-${rIdx}`).addEventListener("click", () => ouvrirIngredients('semaine', sIdx, rIdx, ''));
+                document.getElementById(`nom-${sIdx}-${rIdx}`).addEventListener("click", () => abrirIngredients('semaine', sIdx, rIdx, ''));
                 document.getElementById(`sel-${sIdx}-${rIdx}`).addEventListener("change", (e) => changerRepas(sIdx, rIdx, e.target));
             });
             document.getElementById(`btn-epi-${sIdx}`).addEventListener("click", () => genererEpicerieSemaine(sIdx));
@@ -307,24 +307,9 @@
             if (ex && ex.nom) document.getElementById('ex-' + exIdx).addEventListener("click", () => ouvrirIngredients('extra', 0, 0, ex.nom)); 
         });
     }
+    
+    // Correction de l'appel pour ouvrir l'interface de clic
+    window.abrirIngredients = ouvrirIngredients;
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-    
-
