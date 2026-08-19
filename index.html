@@ -151,21 +151,29 @@
     }
 
 
-    async function chargerMenuDepuisCloud() {
+
+
+
+    
+
+     async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none";
         document.getElementById("ecran-principal").style.display = "block";
         document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
         document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
-            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest?nocache=" + Date.now(), { headers: { "X-Master-Key": MASTER_KEY } });
+            // Lecture en direct avec l'en-tête anti-cache de jsonbin
+            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
+                headers: { "X-Master-Key": MASTER_KEY, "X-Bin-Meta": "false" } 
+            });
             let json = await res.json();
-            if (!json.record || !json.record[codeFamilleActif]) {
+            if (!json || !json[codeFamilleActif]) {
                 donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
                 await pousserVersCloud();
             } else {
-                let b = json.record[codeFamilleActif];
+                let b = json[codeFamilleActif];
                 donneesFamille.semaines = b.semaines || JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = b.extras || JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
             }
@@ -177,11 +185,24 @@
 
     async function pousserVersCloud() {
         try {
-            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest?nocache=" + Date.now(), { headers: { "X-Master-Key": MASTER_KEY } });
-            let docG = await verif.json(); let baseC = docG.record || {};
+            // 1. Relire le classeur global
+            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
+                headers: { "X-Master-Key": MASTER_KEY, "X-Bin-Meta": "false" } 
+            });
+            let baseC = await verif.json() || {};
+            
+            // 2. Injecter vos modifications
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
+            
+            // 3. AUTORISATION FORCÉE : Ajout de X-Bin-Versioning pour forcer jsonbin à accepter la synchro de Vercel
             await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
-                method: "PUT", headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, body: JSON.stringify(baseC)
+                method: "PUT", 
+                headers: { 
+                    "Content-Type": "application/json", 
+                    "X-Master-Key": MASTER_KEY,
+                    "X-Bin-Versioning": "false" 
+                }, 
+                body: JSON.stringify(baseC)
             });
         } catch(e) {}
     }
@@ -200,6 +221,11 @@
         afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
     }
 
+
+
+
+
+    
 
 
     function ouvrirIngredients(type, s, r, exIdx) {
