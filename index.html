@@ -47,8 +47,9 @@
 
 
 
+
 <body>
-<!-- Écran d'accueil pour taper le nom de la famille -->
+<!-- Écran de Connexion -->
 <div id="ecran-login" class="login-box">
     <h2 style="margin: 0; color: #2c3e50;">🔑 Accès Planificateur</h2>
     <p style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">Entrez l'identifiant unique de votre famille pour synchroniser vos appareils.</p>
@@ -70,7 +71,7 @@
         <button class="btn-ajouter" id="btn-ajouter-action">➕ Ajouter aux extras</button>
     </div>
 
-    <div id="loading" class="loading-text" style="display:none;">🔄 Synchronisation en direct avec le cloud...</div>
+    <div id="loading" class="loading-text" style="display:none;">🔄 Synchronisation cloud en direct...</div>
     <div id="menu-grid" class="grid"></div>
     <div class="card" style="border-top: 4px solid #f39c12; background: #fffcf7;">
         <h3>Ma banque de repas en extra</h3>
@@ -96,6 +97,7 @@
         <div id="epicerie-corps" class="liste-resume"></div>
     </div>
 </div>
+
 
 
 
@@ -149,6 +151,7 @@
         chargerMenuDepuisCloud();
     }
 
+
     async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none";
         document.getElementById("ecran-principal").style.display = "block";
@@ -157,24 +160,19 @@
         document.getElementById("loading").style.display = "block";
 
         try {
-            // Lecture par nom de tiroir unique (Évite tous les plantages)
-            let res = await fetch("https://jsonbin.io", {
-                method: "GET",
-                headers: { "X-Master-Key": MASTER_KEY, "X-Bin-Name": "tiroir-" + codeFamilleActif }
+            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", {
+                headers: { "X-Master-Key": MASTER_KEY }
             });
+            let json = await res.json();
             
-            if (!res.ok) {
-                // Si la famille n'existe pas encore dans votre compte, on injecte les données de base
+            if (!json.record || !json.record[codeFamilleActif]) {
                 donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
                 await pousserVersCloud();
             } else {
-                let json = await res.json();
-                // Lecture sécurisée de la liste renvoyée
-                if (json && json.record) {
-                    donneesFamille.semaines = json.record.semaines || JSON.parse(JSON.stringify(REPAS_DE_BASE));
-                    donneesFamille.extras = json.record.extras || JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
-                }
+                let blocFamille = json.record[codeFamilleActif];
+                donneesFamille.semaines = blocFamille.semaines || JSON.parse(JSON.stringify(REPAS_DE_BASE));
+                donneesFamille.extras = blocFamille.extras || JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
             }
         } catch(err) {
             donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
@@ -186,15 +184,33 @@
 
 
 
+    
 
 
-        async function pousserVersCloud() {
+
+### <!-- 📦 BLOC 4 : SAUVEGARDES AVEC SYNC 'PUT' ET RECONSTRUCTION DES GRILLES -->
+
+```javascript
+    async function pousserVersCloud() {
         try {
-            // Envoi et écrasement en direct sur le cloud de la famille connectée
-            await fetch("https://jsonbin.io", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY, "X-Bin-Name": "tiroir-" + codeFamilleActif },
-                body: JSON.stringify(donneesFamille)
+            // 1. Lire d'abord l'ancien bin global pour conserver le classeur des autres familles
+            let verification = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", {
+                headers: { "X-Master-Key": MASTER_KEY }
+            });
+            let documentGlobal = await verification.json();
+            let baseComplete = documentGlobal.record || {};
+            
+            // 2. Mettre à jour uniquement la boîte de la famille active
+            baseComplete[codeFamilleActif] = {
+                semaines: donneesFamille.semaines,
+                extras: donneesFamille.extras
+            };
+
+            // 3. Écraser l'ancien fichier via PUT (Garantit la synchro universelle instantanée)
+            await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY },
+                body: JSON.stringify(baseComplete)
             });
         } catch(e) {}
     }
