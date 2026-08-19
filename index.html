@@ -144,8 +144,7 @@
 
 
 
-
-        function authentifierFamille() {
+    function authentifierFamille() {
         let s = document.getElementById("input-code-famille").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
         if (s.length < 3) { alert("L'identifiant doit contenir au moins 3 caractères."); return; }
         codeFamilleActif = s; try { localStorage.setItem("code_famille_sauve", s); } catch(e) {}
@@ -179,7 +178,9 @@
 
 
 
-        async function pousserVersCloudManuel() {
+
+
+    async function pousserVersCloudManuel() {
         document.getElementById("loading").style.display = "block";
         let succes = await forcerEcritureDirecte();
         document.getElementById("loading").style.display = "none";
@@ -249,16 +250,19 @@
                 donneesFamille.extras.forEach((ex, exIdx) => { gridHtml += '<option value="' + exIdx + '">' + ex.nom + '</option>'; });
                 gridHtml += '</select></div></div>';
             });
-            gridHtml += '</div><button class="btn-epicerie" id="btn-epi-' + sIdx + '">🛒 Liste d\'épicerie</button></div>';
+            gridHtml += `</div><button class="btn-epicerie" id="btn-epi-${sIdx}">🛒 Liste d'épicerie</button></div>`;
         });
         document.getElementById("menu-grid").innerHTML = gridHtml;
-        semaines.forEach((sem, sIdx) => {
+        
+        // CORRECTION DE VARIABLE EXÉCUTÉE : Utilisation de donneesFamille.semaines
+        donneesFamille.semaines.forEach((sem, sIdx) => {
             sem.forEach((repas, rIdx) => {
                 document.getElementById(`nom-${sIdx}-${rIdx}`).addEventListener("click", () => ouvrirIngredients('semaine', sIdx, rIdx, 0));
                 document.getElementById(`sel-${sIdx}-${rIdx}`).addEventListener("change", (e) => changerRepas(sIdx, rIdx, e.target));
             });
             document.getElementById(`btn-epi-${sIdx}`).addEventListener("click", () => genererEpicerieSemaine(sIdx));
         });
+
         let exHtml = "";
         donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) exHtml += `<div class="extra-item" id="ex-${exIdx}">${ex.nom}</div>`; });
         document.getElementById("extras-liste").innerHTML = exHtml;
@@ -267,3 +271,6 @@
 </script>
 </body>
 </html>
+
+
+    
