@@ -38,8 +38,6 @@
 </head>
 
 
-    
-
 
 
 
@@ -56,10 +54,7 @@
 <div id="ecran-principal" class="container" style="display: none;">
     <div class="logout-zone">
         <span>🏠 Espace Synchro : <strong id="affichage-code-actif"></strong></span>
-        <div>
-            <button class="btn-logout" id="btn-sync-action" style="background-color: #27ae60; margin-right: 10px;">🔄 Forcer la synchro</button>
-            <button class="btn-logout" id="btn-logout-action">Changer de famille</button>
-        </div>
+        <button class="btn-logout" id="btn-logout-action">Changer de famille</button>
     </div>
     <h1>Mon Planificateur de Soupers</h1>
     <p class="instruction">Les repas ajoutés vont dans les extras. Vos choix sont automatiquement partagés entre vos appareils.</p>
@@ -91,6 +86,17 @@
 </div>
 
 
+    
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -108,6 +114,7 @@
     const BIN_EXTRAS_COLLECTIF = "6a43fe04da38895dfe17486b";
     // -----------------------------------------------------------------
 
+
     let codeFamilleActif = ""; let donneesFamille = { semaines: [], extras: [] };
     let typePlatSelectionne = "", sIdxSelectionne = 0, rIdxSelectionne = 0, extraIdxSelectionne = 0;
 
@@ -121,7 +128,6 @@
         document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
         document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
         document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
-        document.getElementById("btn-sync-action").addEventListener("click", pousserVersCloudManuel);
         let m = localStorage.getItem("code_famille_sauve");
         if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
     });
@@ -133,18 +139,20 @@
         chargerMenuDepuisCloud();
     }
 
+
+    
+    
+    
     async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none"; document.getElementById("ecran-principal").style.display = "block";
         document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
-        document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
             let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
             let json = await res.json(); let racine = json.record || json || {};
             if (racine && racine[codeFamilleActif]) {
-                let b = racine[codeFamilleActif];
-                donneesFamille.semaines = b.semaines; donneesFamille.extras = b.extras;
-            } else { initialiserDonnees(); await forcerEcritureDirecte(); }
+                let b = racine[codeFamilleActif]; donneesFamille.semaines = b.semaines; donneesFamille.extras = b.extras;
+            } else { initialiserDonnees(); await pousserVersCloud(); }
         } catch(err) { initialiserDonnees(); }
         document.getElementById("loading").style.display = "none"; afficherInterface();
     }
@@ -155,35 +163,28 @@
         donneesFamille.extras = E_BASE.map(n => ({nom: n, ing: ""}));
     }
 
-    async function pousserVersCloudManuel() {
-        document.getElementById("loading").style.display = "block";
-        let succes = await forcerEcritureDirecte();
-        document.getElementById("loading").style.display = "none";
-        alert(succes ? "💾 Changements enregistrés sur le Cloud !" : "❌ Erreur d'enregistrement.");
-    }
-
-    async function forcerEcritureDirecte() {
+    async function pousserVersCloud() {
         try {
             let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
             let jsonG = await verif.json(); let baseC = jsonG.record || jsonG || {};
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
-            let rep = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
+            await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
                 method: "PUT", headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, body: JSON.stringify(baseC)
             });
-            return rep.ok;
-        } catch(e) { return false; }
+        } catch(e) {}
     }
 
-    function ajouterNouveauRepas() {
+    async function ajouterNouveauRepas() {
         let nomInput = document.getElementById("nouveauRepasNom"); let nom = nomInput.value.trim(); if (nom === "") return;
-        donneesFamille.extras.push({ nom: nom, ing: "" }); nomInput.value = ""; afficherInterface();
+        document.getElementById("loading").style.display = "block"; donneesFamille.extras.push({ nom: nom, ing: "" }); nomInput.value = ""; 
+        afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
     }
 
-    function changerRepas(sIdx, rIdx, select) {
+    async function changerRepas(sIdx, rIdx, select) {
         let extraIdx = select.value; if (extraIdx === "") return;
-        let actuelMenu = donneesFamille.semaines[sIdx][rIdx];
+        document.getElementById("loading").style.display = "block"; let actuelMenu = donneesFamille.semaines[sIdx][rIdx];
         donneesFamille.semaines[sIdx][rIdx] = donneesFamille.extras[extraIdx]; donneesFamille.extras[extraIdx] = actuelMenu;
-        afficherInterface();
+        afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
     }
 
     function ouvrirIngredients(type, s, r, exIdx) {
@@ -193,11 +194,11 @@
         document.getElementById("modal-texte").value = plat.ing || ""; document.getElementById("box-ingredients").style.display = "block";
     }
 
-    function sauverIngredients() {
-        let txt = document.getElementById("modal-texte").value.trim();
+    async function sauverIngredients() {
+        let txt = document.getElementById("modal-texte").value.trim(); document.getElementById("loading").style.display = "block";
         if (typePlatSelectionne === "semaine") { donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne].ing = txt; } 
         else { donneesFamille.extras[extraIdxSelectionne].ing = txt; }
-        fermerFenetre(); afficherInterface();
+        fermerFenetre(); afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
     }
 
     function genererEpicerieSemaine(sIdx) {
@@ -238,16 +239,11 @@
         let exHtml = "";
         donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) exHtml += `<div class="extra-item" id="ex-${exIdx}">${ex.nom}</div>`; });
         document.getElementById("extras-liste").innerHTML = exHtml;
-        donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) document.getElementById(`ex-${exIdx}`).addEventListener("click", () => ouvrirIngredients('extra', 0, 0, exIdx)); });
+        donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) document.getElementById(`ex-${exIdx}`).addEventListener("click", () => abrirIngredients('extra', 0, 0, exIdx)); });
     }
+    window.abrirIngredients = ouvrirIngredients;
 </script>
 </body>
 </html>
-
-    
-
-    
-    
-    
 
     
