@@ -115,6 +115,7 @@
     // -----------------------------------------------------------------
 
 
+
     let codeFamilleActif = ""; let donneesFamille = { semaines: [], extras: [] };
     let typePlatSelectionne = "", sIdxSelectionne = 0, rIdxSelectionne = 0, extraIdxSelectionne = 0;
 
@@ -140,16 +141,21 @@
     }
 
 
-    
-    
-    
-    async function chargerMenuDepuisCloud() {
+
+
+
+        async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none"; document.getElementById("ecran-principal").style.display = "block";
         document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
-            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
-            let json = await res.json(); let racine = json.record || json || {};
+            // Lecture propre en ignorant les métadonnées pour lire directement le texte
+            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
+                headers: { "X-Master-Key": MASTER_KEY, "X-Bin-Meta": "false" } 
+            });
+            let json = await res.json();
+            let racine = json.record || json || {};
+            
             if (racine && racine[codeFamilleActif]) {
                 let b = racine[codeFamilleActif]; donneesFamille.semaines = b.semaines; donneesFamille.extras = b.extras;
             } else { initialiserDonnees(); await pousserVersCloud(); }
@@ -165,11 +171,25 @@
 
     async function pousserVersCloud() {
         try {
-            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
-            let jsonG = await verif.json(); let baseC = jsonG.record || jsonG || {};
+            // 1. Relecture globale sécurisée
+            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
+                headers: { "X-Master-Key": MASTER_KEY, "X-Bin-Meta": "false" } 
+            });
+            let jsonG = await verif.json(); 
+            let baseC = jsonG.record || jsonG || {};
+            
+            // 2. Fusion du tiroir de la famille active
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
+            
+            // 3. CORRECTION : Ajout de la clé X-Master-Key et désactivation des métadonnées pour valider l'enregistrement PUT
             await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
-                method: "PUT", headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, body: JSON.stringify(baseC)
+                method: "PUT", 
+                headers: { 
+                    "Content-Type": "application/json", 
+                    "X-Master-Key": MASTER_KEY,
+                    "X-Bin-Meta": "false"
+                }, 
+                body: JSON.stringify(baseC)
             });
         } catch(e) {}
     }
@@ -239,11 +259,10 @@
         let exHtml = "";
         donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) exHtml += `<div class="extra-item" id="ex-${exIdx}">${ex.nom}</div>`; });
         document.getElementById("extras-liste").innerHTML = exHtml;
-        donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) document.getElementById(`ex-${exIdx}`).addEventListener("click", () => abrirIngredients('extra', 0, 0, exIdx)); });
+        donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) document.getElementById(`ex-${exIdx}`).addEventListener("click", () => ouvrirIngredients('extra', 0, 0, exIdx)); });
     }
     window.abrirIngredients = ouvrirIngredients;
 </script>
 </body>
 </html>
 
-    
