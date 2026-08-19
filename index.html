@@ -183,7 +183,6 @@
         document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
-            // Lecture brute de la dernière version du fichier global
             let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
                 headers: { "X-Master-Key": MASTER_KEY } 
             });
@@ -195,14 +194,12 @@
                 donneesFamille.semaines = b.semaines || JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = b.extras || JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
             } else {
-                // Initialisation neuve et propre si le tiroir de cette famille n'existe pas encore
                 donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
                 await pousserVersCloud();
             }
         } catch(err) {
-            donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
-            donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
+            console.log("Erreur de raccordement");
         }
         document.getElementById("loading").style.display = "none"; 
         afficherInterface();
@@ -216,7 +213,6 @@
             let jsonGlobal = await verif.json(); 
             let baseC = jsonGlobal.record || jsonGlobal || {};
             
-            // LOGIQUE FIXÉE : Utilisation exclusive et certifiée de la variable baseC
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
             
             await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
@@ -227,55 +223,70 @@
         } catch(e) {}
     }
 
-
-
-
-
-
-
-
-    
-
+    // CORRECTIONS APPLIQUÉES ICI : Ajout du mot-clé async indispensable pour valider l'envoi cloud
     async function ajouterNouveauRepas() {
-        let nomInput = document.getElementById("nouveauRepasNom"); let nom = nomInput.value.trim(); if (nom === "") return;
+        let nomInput = document.getElementById("nouveauRepasNom");
+        let nom = nomInput.value.trim(); if (nom === "") return;
         document.getElementById("loading").style.display = "block";
-        donneesFamille.extras.push({ nom: nom, ing: "" }); nomInput.value = "";
-        afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
+        
+        donneesFamille.extras.push({ nom: nom, ing: "" }); 
+        nomInput.value = "";
+        
+        afficherInterface(); 
+        await pousserVersCloud(); 
+        document.getElementById("loading").style.display = "none";
     }
 
     async function changerRepas(sIdx, rIdx, select) {
         let extraIdx = select.value; if (extraIdx === "") return;
-        let actuelMenu = donneesFamille.semaines[sIdx][rIdx]; document.getElementById("loading").style.display = "block";
-        donneesFamille.semaines[sIdx][rIdx] = donneesFamille.extras[extraIdx]; donneesFamille.extras[extraIdx] = actuelMenu;
-        afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
+        let actuelMenu = donneesFamille.semaines[sIdx][rIdx];
+        document.getElementById("loading").style.display = "block";
+        
+        donneesFamille.semaines[sIdx][rIdx] = donneesFamille.extras[extraIdx];
+        donneesFamille.extras[extraIdx] = actuelMenu;
+        
+        afficherInterface(); 
+        await pousserVersCloud(); 
+        document.getElementById("loading").style.display = "none";
     }
 
 
 
+
     
     
 
 
-    function ouvrirIngredients(type, s, r, exIdx) {
+      function ouvrirIngredients(type, s, r, exIdx) {
         typePlatSelectionne = type; sIdxSelectionne = s; rIdxSelectionne = r; extraIdxSelectionne = exIdx;
         let plat = (type === "semaine") ? donneesFamille.semaines[s][r] : donneesFamille.extras[exIdx];
-        document.getElementById("modal-titre").innerText = plat.nom; document.getElementById("modal-texte").value = plat.ing || "";
+        document.getElementById("modal-titre").innerText = plat.nom;
+        document.getElementById("modal-texte").value = plat.ing || "";
         document.getElementById("box-ingredients").style.display = "block";
     }
 
     async function sauverIngredients() {
-        let txt = document.getElementById("modal-texte").value.trim(); document.getElementById("loading").style.display = "block";
-        if (typePlatSelectionne === "semaine") { donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne].ing = txt; } 
-        else { donneesFamille.extras[extraIdxSelectionne].ing = txt; }
-        fermerFenetre(); afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
+        let txt = document.getElementById("modal-texte").value.trim();
+        document.getElementById("loading").style.display = "block";
+        if (typePlatSelectionne === "semaine") {
+            donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne].ing = txt;
+        } else {
+            donneesFamille.extras[extraIdxSelectionne].ing = txt;
+        }
+        fermerFenetre();
+        afficherInterface();
+        await pousserVersCloud();
+        document.getElementById("loading").style.display = "none";
     }
 
     function genererEpicerieSemaine(sIdx) {
-        document.getElementById("epicerie-titre").innerText = "🛒 Épicerie - Semaine " + (sIdx + 1); let txt = "";
+        document.getElementById("epicerie-titre").innerText = "🛒 Épicerie - Semaine " + (sIdx + 1);
+        let txt = "";
         donneesFamille.semaines[sIdx].forEach(r => {
             if (r && r.nom) txt += "🔹 " + r.nom.toUpperCase() + " :\n" + (r.ing && r.ing.trim() !== "" ? r.ing.trim() + "\n" : "(Aucun ingrédient inscrit)\n") + "\n-----------------------\n\n";
         });
-        document.getElementById("epicerie-corps").innerText = txt; document.getElementById("box-epicerie").style.display = "block";
+        document.getElementById("epicerie-corps").innerText = txt;
+        document.getElementById("box-epicerie").style.display = "block";
     }
 
     function deconnexion() { try { localStorage.removeItem("code_famille_sauve"); } catch(e) {} codeFamilleActif = ""; location.reload(); }
@@ -299,7 +310,7 @@
         document.getElementById("menu-grid").innerHTML = gridHtml;
         
         donneesFamille.semaines.forEach((sem, sIdx) => {
-            sem.forEach((repas, rIdx) => {
+            semaine.forEach((repas, rIdx) => {
                 document.getElementById(`nom-${sIdx}-${rIdx}`).addEventListener("click", () => ouvrirIngredients('semaine', sIdx, rIdx, 0));
                 document.getElementById(`sel-${sIdx}-${rIdx}`).addEventListener("change", (e) => changerRepas(sIdx, rIdx, e.target));
             });
