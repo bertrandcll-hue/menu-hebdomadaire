@@ -3,34 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planificateur de Soupers Synchronisé 🍽️</title>
+    <title>Planificateur Synchronisé 🍽️</title>
     <style>
         body { font-family: sans-serif; background-color: #f0f4f8; padding: 10px; color: #333; margin: 0; }
         .container { max-width: 1100px; margin: 0 auto; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: #2c3e50; margin-bottom: 5px; font-size: 22px; }
         .instruction { text-align: center; color: #7f8c8d; margin-bottom: 25px; font-size: 13px; padding: 0 10px; }
-        
         .login-box { max-width: 400px; margin: 10% auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); text-align: center; border-top: 5px solid #2980b9; }
         .login-box input { width: 100%; padding: 12px; box-sizing: border-box; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; margin: 15px 0; text-align: center; }
         .btn-login { width: 100%; padding: 12px; background-color: #2980b9; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; }
-        
         .ajout-section { background: #ebf5fb; padding: 15px; border-radius: 8px; margin: 20px auto; max-width: 650px; border: 1px solid #a9cce3; display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
         .ajout-section input { padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; min-width: 200px; flex: 1; }
         .btn-ajouter { padding: 12px 15px; background-color: #2980b9; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; }
-        
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 30px; }
         .card { background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px solid #ddd; border-top: 4px solid #3498db; display: flex; flex-direction: column; justify-content: space-between; }
         h3 { margin-top: 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 5px; font-size: 18px; }
-        
         .repas-block { background: #f1f7fc; margin: 12px 0; padding: 14px 12px; border-radius: 6px; border-left: 4px solid #2980b9; }
         .repas-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .select-echange { font-size: 14px; padding: 6px; border-radius: 4px; border: 1px solid #f39c12; background-color: #fff8ee; color: #d35400; cursor: pointer; }
         .btn-epicerie { padding: 12px; background-color: #34495e; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 10px; width: 100%; text-align: center; }
-        
         .repas-nom { color: #2980b9; font-weight: bold; font-size: 16px; cursor: pointer; flex: 1; word-break: break-word; }
         .extra-box { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
         .extra-item { background: #fff3e0; padding: 12px 15px; border-radius: 6px; border: 1px solid #ffe0b2; font-weight: bold; color: #e65100; min-width: 120px; text-align: center; cursor: pointer; font-size: 15px; flex: 1; }
-        
         .loading-text { text-align: center; font-weight: bold; color: #7f8c8d; font-size: 16px; padding: 10px; }
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
         .modal-box { background: white; margin: 15% auto; padding: 20px; width: 90%; max-width: 450px; border-radius: 10px; box-sizing: border-box; }
@@ -44,64 +38,58 @@
 </head>
 
 
+    
+
+
 
 
 
 
 
 <body>
-<!-- Écran de Connexion -->
 <div id="ecran-login" class="login-box">
-    <h2 style="margin: 0; color: #2c3e50;">🔑 Accès Planificateur</h2>
-    <p style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">Entrez l'identifiant unique de votre famille pour synchroniser vos appareils.</p>
+    <h2>🔑 Accès Planificateur</h2>
+    <p>Entrez l'identifiant unique de votre famille pour synchroniser vos appareils.</p>
     <input type="text" id="input-code-famille" placeholder="Ex: famille-tremblay">
     <button class="btn-login" id="btn-login-action">Ouvrir notre menu</button>
 </div>
-
-<!-- Interface Principale -->
 <div id="ecran-principal" class="container" style="display: none;">
     <div class="logout-zone">
         <span>🏠 Espace Synchro : <strong id="affichage-code-actif"></strong></span>
         <div>
-            <!-- AJOUT DU BOUTON DE SYNCHRONISATION MANUELLE -->
             <button class="btn-logout" id="btn-sync-action" style="background-color: #27ae60; margin-right: 10px;">🔄 Forcer la synchro</button>
             <button class="btn-logout" id="btn-logout-action">Changer de famille</button>
         </div>
     </div>
-    <h1 id="titre-principal">Planificateur de Soupers</h1>
+    <h1>Mon Planificateur de Soupers</h1>
     <p class="instruction">Les repas ajoutés vont dans les extras. Vos choix sont automatiquement partagés entre vos appareils.</p>
-    
     <div class="ajout-section">
         <input type="text" id="nouveauRepasNom" placeholder="Nom du repas (ex: Vol-au-vent)">
         <button class="btn-ajouter" id="btn-ajouter-action">➕ Ajouter aux extras</button>
     </div>
-
-    <div id="loading" class="loading-text" style="display:none;">🔄 Synchronisation cloud en direct...</div>
+    <div id="loading" class="loading-text" style="display:none;">🔄 Synchronisation cloud...</div>
     <div id="menu-grid" class="grid"></div>
     <div class="card" style="border-top: 4px solid #f39c12; background: #fffcf7;">
         <h3>Ma banque de repas en extra</h3>
         <div id="extras-liste" class="extra-box"></div>
     </div>
 </div>
-
-<!-- Boîte Ingrédients -->
 <div id="box-ingredients" class="modal">
     <div class="modal-box">
         <button class="btn-close" id="btn-fermer-ing-action">Fermer</button>
-        <h2 id="modal-titre" style="margin-top: 0; color: #2c3e50;">Ingrédients</h2>
+        <h2>Ingrédients</h2>
         <textarea id="modal-texte" placeholder="Liste des ingrédients..."></textarea>
         <button class="btn-action" id="btn-sauver-ing-action">💾 Enregistrer les détails</button>
     </div>
 </div>
-
-<!-- Boîte Épicerie -->
 <div id="box-epicerie" class="modal">
     <div class="modal-box">
         <button class="btn-close" id="btn-fermer-epi-action">Fermer</button>
-        <h2 id="epicerie-titre" style="margin-top: 0; color: #2c3e50;">🛒 Liste d'épicerie</h2>
+        <h2>🛒 Liste d'épicerie</h2>
         <div id="epicerie-corps" class="liste-resume"></div>
     </div>
 </div>
+
 
 
 
@@ -120,10 +108,32 @@
     const BIN_EXTRAS_COLLECTIF = "6a43fe04da38895dfe17486b";
     // -----------------------------------------------------------------
 
+
     let codeFamilleActif = ""; let donneesFamille = { semaines: [], extras: [] };
     let typePlatSelectionne = "", sIdxSelectionne = 0, rIdxSelectionne = 0, extraIdxSelectionne = 0;
 
-    const REPAS_DE_BASE = [
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
+        document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
+        document.getElementById("btn-ajouter-action").addEventListener("click", ajouterNouveauRepas);
+        document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
+        document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
+        document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
+        document.getElementById("btn-sync-action").addEventListener("click", () => chargerMenuDepuisCloud());
+        let m = localStorage.getItem("code_famille_sauve");
+        if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
+    });
+
+    function authentifierFamille() {
+        let s = document.getElementById("input-code-famille").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+        if (s.length < 3) { alert("L'identifiant doit contenir au moins 3 caractères."); return; }
+        codeFamilleActif = s; try { localStorage.setItem("code_famille_sauve", s); } catch(e) {}
+        chargerMenuDepuisCloud();
+    }
+
+
+    
+        const REPAS_DE_BASE = [
         [ {nom: "Pâté chinois", ing: ""}, {nom: "Poulet entier", ing: ""}, {nom: "Belogne rôti", ing: ""}, {nom: "Poke Bowl", ing: ""} ],
         [ {nom: "Sloppy Joe", ing: ""}, {nom: "Général Tao", ing: ""}, {nom: "Patate au jambon", ing: ""}, {nom: "Filet de poisson pané", ing: ""} ],
         [ {nom: "Steak haché en sauce", ing: ""}, {nom: "Burger poulet", ing: ""}, {nom: "Filet de porc", ing: ""}, {nom: "Guedille thon", ing: ""} ],
@@ -136,37 +146,12 @@
         {nom: "Vol-au-vent", ing: ""}, {nom: "Burritos Bowl", ing: ""}, {nom: "Quesedillas", ing: ""}
     ];
 
-    document.addEventListener("DOMContentLoaded", () => {
-        document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
-        document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
-        document.getElementById("btn-ajouter-action").addEventListener("click", ajouterNouveauRepas);
-        document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
-        document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
-        document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
-        document.getElementById("btn-sync-action").addEventListener("click", declencherSynchroManuelle);
-        let m = localStorage.getItem("code_famille_sauve");
-        if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
-    });
 
-    function authentifierFamille() {
-        let s = document.getElementById("input-code-famille").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
-        if (s.length < 3) { alert("L'identifiant doit contenir au moins 3 caractères."); return; }
-        codeFamilleActif = s; try { localStorage.setItem("code_famille_sauve", s); } catch(e) {}
-        chargerMenuDepuisCloud();
-    }
-    async function declencherSynchroManuelle() { await chargerMenuDepuisCloud(); }
-
-
-
-
-
-
-
+    
     async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none";
         document.getElementById("ecran-principal").style.display = "block";
         document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
-        document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
             let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
@@ -180,7 +165,9 @@
                 donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
                 await pousserVersCloud();
             }
-        } catch(err) { console.log("Erreur cloud"); }
+        } catch(err) {
+            donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE)); donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
+        }
         document.getElementById("loading").style.display = "none"; afficherInterface();
     }
 
@@ -209,22 +196,11 @@
         afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
     }
 
-
-    
-
-  
-
-
-
-
-    
-    
-
-
     function ouvrirIngredients(type, s, r, exIdx) {
         typePlatSelectionne = type; sIdxSelectionne = s; rIdxSelectionne = r; extraIdxSelectionne = exIdx;
         let plat = (type === "semaine") ? donneesFamille.semaines[s][r] : donneesFamille.extras[exIdx];
-        document.getElementById("modal-titre").innerText = plat.nom; document.getElementById("modal-texte").value = plat.ing || "";
+        document.getElementById("box-ingredients").querySelector("h2").innerText = plat.nom;
+        document.getElementById("modal-texte").value = plat.ing || "";
         document.getElementById("box-ingredients").style.display = "block";
     }
 
@@ -262,7 +238,6 @@
             gridHtml += `</div><button class="btn-epicerie" id="btn-epi-${sIdx}">🛒 Liste d'épicerie</button></div>`;
         });
         document.getElementById("menu-grid").innerHTML = gridHtml;
-        
         donneesFamille.semaines.forEach((sem, sIdx) => {
             sem.forEach((repas, rIdx) => {
                 document.getElementById(`nom-${sIdx}-${rIdx}`).addEventListener("click", () => ouvrirIngredients('semaine', sIdx, rIdx, 0));
@@ -270,7 +245,6 @@
             });
             document.getElementById(`btn-epi-${sIdx}`).addEventListener("click", () => genererEpicerieSemaine(sIdx));
         });
-
         let exHtml = "";
         donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) exHtml += `<div class="extra-item" id="ex-${exIdx}">${ex.nom}</div>`; });
         document.getElementById("extras-liste").innerHTML = exHtml;
@@ -279,8 +253,3 @@
 </script>
 </body>
 </html>
-
-
-
-    
-    
