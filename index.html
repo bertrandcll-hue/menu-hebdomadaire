@@ -133,6 +133,9 @@
         {nom: "Vol-au-vent", ing: ""}, {nom: "Burritos Bowl", ing: ""}, {nom: "Quesedillas", ing: ""}
     ];
 
+    
+
+
     document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
         document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
@@ -140,10 +143,9 @@
         document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
         document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
         document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
-        try {
-            let m = localStorage.getItem("code_famille_sauve");
-            if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
-        } catch(e) {}
+        
+        let m = localStorage.getItem("code_famille_sauve");
+        if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
     });
 
     function authentifierFamille() {
@@ -156,7 +158,6 @@
 
 
 
-
     async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none";
         document.getElementById("ecran-principal").style.display = "block";
@@ -164,7 +165,9 @@
         document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
-            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
+            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest?nocache=" + Date.now(), {
+                headers: { "X-Master-Key": MASTER_KEY }
+            });
             let json = await res.json();
             if (!json.record || !json.record[codeFamilleActif]) {
                 donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
@@ -184,7 +187,9 @@
 
     async function pousserVersCloud() {
         try {
-            let verification = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
+            let verification = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest?nocache=" + Date.now(), {
+                headers: { "X-Master-Key": MASTER_KEY }
+            });
             let documentGlobal = await verification.json();
             let baseComplete = documentGlobal.record || {};
             baseComplete[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
@@ -232,13 +237,12 @@
 
 
 
-    function genererEpicerieSemaine(sIdx) {
+
+        function genererEpicerieSemaine(sIdx) {
         document.getElementById("epicerie-titre").innerText = "🛒 Épicerie - Semaine " + (sIdx + 1);
         let txt = "";
-        donneesFamille.semaines[sIdx].forEach(repas => {
-            if (repas && repas.nom) {
-                txt += "🔹 " + repas.nom.toUpperCase() + " :\n" + (repas.ing && repas.ing.trim() !== "" ? repas.ing.trim() + "\n" : "(Aucun ingrédient inscrit)\n") + "\n-----------------------\n\n";
-            }
+        donneesFamille.semaines[sIdx].forEach(r => {
+            if (r && r.nom) txt += "🔹 " + r.nom.toUpperCase() + " :\n" + (r.ing && r.ing.trim() !== "" ? r.ing.trim() + "\n" : "(Aucun ingrédient inscrit)\n") + "\n-----------------------\n\n";
         });
         document.getElementById("epicerie-corps").innerText = txt; document.getElementById("box-epicerie").style.display = "block";
     }
@@ -249,38 +253,40 @@
 
     function afficherInterface() {
         let gridHtml = "";
-        donneesFamille.semaines.forEach((semaine, sIdx) => {
+        donneesFamille.semaines.forEach((sem, sIdx) => {
             gridHtml += '<div class="card"><div><h3>Semaine ' + (sIdx + 1) + '</h3>';
-            semaine.forEach((repas, rIdx) => {
-                let nomAffichage = (repas && repas.nom) ? repas.nom : "Repas libre";
-                let spanId = `nom-${sIdx}-${rIdx}`, selectId = `sel-${sIdx}-${rIdx}`;
-                gridHtml += '<div class="repas-block"><div class="repas-header"><span class="repas-nom" id="' + spanId + '">' + nomAffichage + '</span>';
-                gridHtml += '<select class="select-echange" id="' + selectId + '"><option value="" disabled selected>🔄</option>';
-                donneesFamille.extras.forEach((ex, exIdx) => { gridHtml += '<option value="' + exIdx + '">' + ex.nom + '</option>'; });
+            sem.forEach((repas, rIdx) => {
+                let nomAff = (repas && repas.nom) ? repas.nom : "Repas libre";
+                let spanId = `nom-${sIdx}-${rIdx}`, selId = `sel-${sIdx}-${rIdx}`;
+                gridHtml += `<div class="repas-block"><div class="repas-header"><span class="repas-nom" id="${spanId}">${nomAff}</span>`;
+                gridHtml += `<select class="select-echange" id="${selId}"><option value="" disabled selected>🔄</option>`;
+                donneesFamille.extras.forEach((ex, exIdx) => { gridHtml += `<option value="${exIdx}">${ex.nom}</option>`; });
                 gridHtml += '</select></div></div>';
             });
-            gridHtml += '</div><button class="btn-epicerie" id="btn-epi-' + sIdx + '">🛒 Liste d\'épicerie</button></div>';
+            gridHtml += `</div><button class="btn-epicerie" id="btn-epi-${sIdx}">🛒 Liste d'épicerie</button></div>`;
         });
         document.getElementById("menu-grid").innerHTML = gridHtml;
         
-        donneesFamille.semaines.forEach((semaine, sIdx) => {
-            semaine.forEach((repas, rIdx) => {
+        donneesFamille.semaines.forEach((sem, sIdx) => {
+            sem.forEach((repas, rIdx) => {
                 document.getElementById(`nom-${sIdx}-${rIdx}`).addEventListener("click", () => ouvrirIngredients('semaine', sIdx, rIdx, 0));
                 document.getElementById(`sel-${sIdx}-${rIdx}`).addEventListener("change", (e) => changerRepas(sIdx, rIdx, e.target));
             });
             document.getElementById(`btn-epi-${sIdx}`).addEventListener("click", () => genererEpicerieSemaine(sIdx));
         });
 
-        let extrasHtml = "";
-        donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) extrasHtml += '<div class="extra-item" id="ex-' + exIdx + '">' + ex.nom + '</div>'; });
-        document.getElementById("extras-liste").innerHTML = extrasHtml;
-        donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) document.getElementById('ex-' + exIdx).addEventListener("click", () => ouvrirIngredients('extra', 0, 0, exIdx)); });
+        let exHtml = "";
+        donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) exHtml += `<div class="extra-item" id="ex-${exIdx}">${ex.nom}</div>`; });
+        document.getElementById("extras-liste").innerHTML = exHtml;
+        donneesFamille.extras.forEach((ex, exIdx) => { if (ex && ex.nom) document.getElementById(`ex-${exIdx}`).addEventListener("click", () => ouvrirIngredients('extra', 0, 0, exIdx)); });
     }
 </script>
 </body>
 </html>
 
-    
+
     
 
+    
+    
     
