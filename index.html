@@ -58,11 +58,15 @@
     <button class="btn-login" id="btn-login-action">Ouvrir notre menu</button>
 </div>
 
-<!-- Interface Principale (Masquée au démarrage) -->
+<!-- Interface Principale -->
 <div id="ecran-principal" class="container" style="display: none;">
     <div class="logout-zone">
         <span>🏠 Espace Synchro : <strong id="affichage-code-actif"></strong></span>
-        <button class="btn-logout" id="btn-logout-action">Changer de famille</button>
+        <div>
+            <!-- AJOUT DU BOUTON DE SYNCHRONISATION MANUELLE -->
+            <button class="btn-logout" id="btn-sync-action" style="background-color: #27ae60; margin-right: 10px;">🔄 Forcer la synchro</button>
+            <button class="btn-logout" id="btn-logout-action">Changer de famille</button>
+        </div>
     </div>
     <h1 id="titre-principal">Planificateur de Soupers</h1>
     <p class="instruction">Les repas ajoutés vont dans les extras. Vos choix sont automatiquement partagés entre vos appareils.</p>
@@ -107,6 +111,7 @@
 
 
 
+
 <script>
     // -----------------------------------------------------------------
     // ACCÈS TECHNIQUE SÉCURISÉ JSONBIN :
@@ -132,13 +137,17 @@
         {nom: "Vol-au-vent", ing: ""}, {nom: "Burritos Bowl", ing: ""}, {nom: "Quesedillas", ing: ""}
     ];
 
-    document.addEventListener("DOMContentLoaded", () => {
+     document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
         document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
         document.getElementById("btn-ajouter-action").addEventListener("click", ajouterNouveauRepas);
         document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
         document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
         document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
+        
+        // CORRECTION : Association du bouton au clic pour forcer le chargement du cloud
+        document.getElementById("btn-sync-action").addEventListener("click", chargerMenuDepuisCloud);
+        
         let m = localStorage.getItem("code_famille_sauve");
         if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
     });
@@ -146,7 +155,8 @@
     function authentifierFamille() {
         let s = document.getElementById("input-code-famille").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
         if (s.length < 3) { alert("L'identifiant doit contenir au moins 3 caractères."); return; }
-        codeFamilleActif = s; try { localStorage.setItem("code_famille_sauve", s); } catch(e) {}
+        codeFamilleActif = s;
+        try { localStorage.setItem("code_famille_sauve", s); } catch(e) {}
         chargerMenuDepuisCloud();
     }
 
@@ -163,13 +173,11 @@
         document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
-            // Lecture en direct de la toute dernière version enregistrée
-            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
+            // CORRECTION ANTI-CACHE : L'adresse intègre l'heure exacte en millisecondes pour forcer jsonbin à renvoyer le vrai fichier à jour
+            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest?nocache=" + Date.now(), { 
                 headers: { "X-Master-Key": MASTER_KEY } 
             });
             let json = await res.json();
-            
-            // ADAPTATION VERSIONING : jsonbin range maintenant les données dans l'enveloppe .record
             let racine = json.record || json;
             
             if (!racine || !racine[codeFamilleActif]) {
@@ -189,27 +197,22 @@
 
     async function pousserVersCloud() {
         try {
-            // 1. Relire la dernière version du classeur global
-            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
+            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest?nocache=" + Date.now(), { 
                 headers: { "X-Master-Key": MASTER_KEY } 
             });
-            let jsonGlobal = await verif.json();
-            let baseC = jsonGlobal.record || jsonGlobal || {};
-            
-            // 2. Injecter vos modifications dans votre tiroir de famille
+            let jsonGlobal = await verif.json(); let baseC = jsonGlobal.record || jsonGlobal || {};
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
-            
-            // 3. ADAPTATION VERSIONING : On retire l'en-tête bloquant pour laisser jsonbin créer la nouvelle version
             await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
-                method: "PUT", 
-                headers: { 
-                    "Content-Type": "application/json", 
-                    "X-Master-Key": MASTER_KEY
-                }, 
-                body: JSON.stringify(baseC)
+                method: "PUT", headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, body: JSON.stringify(baseC)
             });
         } catch(e) {}
     }
+
+
+
+
+
+    
 
     async function ajouterNouveauRepas() {
         let nomInput = document.getElementById("nouveauRepasNom"); let nom = nomInput.value.trim(); if (nom === "") return;
