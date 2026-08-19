@@ -156,24 +156,28 @@
 
     
 
-     async function chargerMenuDepuisCloud() {
+    async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none";
         document.getElementById("ecran-principal").style.display = "block";
         document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
         document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
-            // Lecture en direct avec l'en-tête anti-cache de jsonbin
+            // Lecture en direct de la toute dernière version enregistrée
             let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
-                headers: { "X-Master-Key": MASTER_KEY, "X-Bin-Meta": "false" } 
+                headers: { "X-Master-Key": MASTER_KEY } 
             });
             let json = await res.json();
-            if (!json || !json[codeFamilleActif]) {
+            
+            // ADAPTATION VERSIONING : jsonbin range maintenant les données dans l'enveloppe .record
+            let racine = json.record || json;
+            
+            if (!racine || !racine[codeFamilleActif]) {
                 donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
                 await pousserVersCloud();
             } else {
-                let b = json[codeFamilleActif];
+                let b = racine[codeFamilleActif];
                 donneesFamille.semaines = b.semaines || JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = b.extras || JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
             }
@@ -185,22 +189,22 @@
 
     async function pousserVersCloud() {
         try {
-            // 1. Relire le classeur global
+            // 1. Relire la dernière version du classeur global
             let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
-                headers: { "X-Master-Key": MASTER_KEY, "X-Bin-Meta": "false" } 
+                headers: { "X-Master-Key": MASTER_KEY } 
             });
-            let baseC = await verif.json() || {};
+            let jsonGlobal = await verif.json();
+            let baseC = jsonGlobal.record || jsonGlobal || {};
             
-            // 2. Injecter vos modifications
+            // 2. Injecter vos modifications dans votre tiroir de famille
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
             
-            // 3. AUTORISATION FORCÉE : Ajout de X-Bin-Versioning pour forcer jsonbin à accepter la synchro de Vercel
+            // 3. ADAPTATION VERSIONING : On retire l'en-tête bloquant pour laisser jsonbin créer la nouvelle version
             await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
                 method: "PUT", 
                 headers: { 
                     "Content-Type": "application/json", 
-                    "X-Master-Key": MASTER_KEY,
-                    "X-Bin-Versioning": "false" 
+                    "X-Master-Key": MASTER_KEY
                 }, 
                 body: JSON.stringify(baseC)
             });
@@ -223,8 +227,7 @@
 
 
 
-
-
+    
     
 
 
