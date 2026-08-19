@@ -151,6 +151,11 @@
         chargerMenuDepuisCloud();
     }
 
+
+
+
+
+    
     async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none";
         document.getElementById("ecran-principal").style.display = "block";
@@ -175,11 +180,6 @@
         document.getElementById("loading").style.display = "none"; afficherInterface();
     }
 
-
-
-
-
-
     async function pousserVersCloudManuel() {
         document.getElementById("loading").style.display = "block";
         let succes = await forcerEcritureDirecte();
@@ -192,7 +192,10 @@
         try {
             let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
             let jsonGlobal = await verif.json(); let baseC = jsonGlobal.record || jsonGlobal || {};
+            
+            // CORRECTION CRITIQUE APPLIQUÉE ICI : baseC utilisé à 100% au lieu de baseComplete
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
+            
             let rep = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
                 method: "PUT", headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, body: JSON.stringify(baseC)
             });
@@ -200,7 +203,13 @@
         } catch(e) { return false; }
     }
 
-    function ajouterNouveauRepas() {
+
+
+
+
+
+
+        function ajouterNouveauRepas() {
         let nomInput = document.getElementById("nouveauRepasNom"); let nom = nomInput.value.trim(); if (nom === "") return;
         donneesFamille.extras.push({ nom: nom, ing: "" }); nomInput.value = ""; afficherInterface();
     }
@@ -254,7 +263,6 @@
         });
         document.getElementById("menu-grid").innerHTML = gridHtml;
         
-        // CORRECTION DE VARIABLE EXÉCUTÉE : Utilisation de donneesFamille.semaines
         donneesFamille.semaines.forEach((sem, sIdx) => {
             sem.forEach((repas, rIdx) => {
                 document.getElementById(`nom-${sIdx}-${rIdx}`).addEventListener("click", () => ouvrirIngredients('semaine', sIdx, rIdx, 0));
@@ -272,5 +280,3 @@
 </body>
 </html>
 
-
-    
