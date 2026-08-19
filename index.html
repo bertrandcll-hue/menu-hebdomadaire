@@ -108,27 +108,11 @@
     const BIN_EXTRAS_COLLECTIF = "6a43fe04da38895dfe17486b";
     // -----------------------------------------------------------------
 
-
-    let codeFamilleActif = ""; 
-    let donneesFamille = { semaines: [], extras: [] };
+    let codeFamilleActif = ""; let donneesFamille = { semaines: [], extras: [] };
     let typePlatSelectionne = "", sIdxSelectionne = 0, rIdxSelectionne = 0, extraIdxSelectionne = 0;
 
-
-
-    const REPAS_DE_BASE = [
-        [ {nom: "Pâté chinois", ing: ""}, {nom: "Poulet entier", ing: ""}, {nom: "Belogne rôti", ing: ""}, {nom: "Poke Bowl", ing: ""} ],
-        [ {nom: "Sloppy Joe", ing: ""}, {nom: "Général Tao", ing: ""}, {nom: "Patate au jambon", ing: ""}, {nom: "Filet de poisson pané", ing: ""} ],
-        [ {nom: "Steak haché en sauce", ing: ""}, {nom: "Burger poulet", ing: ""}, {nom: "Filet de porc", ing: ""}, {nom: "Guedille thon", ing: ""} ],
-        [ {nom: "Boulette M&M", ing: ""}, {nom: "Fajitas", ing: ""}, {nom: "Saucisses dans le sirop", ing: ""}, {nom: "Casserole de thon", ing: ""} ],
-        [ {nom: "Spaghetti", ing: ""}, {nom: "Poulet rouge", ing: ""}, {nom: "Épaule de porc", ing: ""}, {nom: "Macaroni à la viande", ing: ""} ],
-        [ {nom: "Pâte au boeuf à la coréenne", ing: ""}, {nom: "Poulet Parmigiana", ing: ""}, {nom: "Pâte Carbonara", ing: ""}, {nom: "Mac & Cheese", ing: ""} ]
-    ];
-    const EXTRAS_DE_BASE = [
-        {nom: "Lasagne", ing: ""}, {nom: "Tortellini sauce rosée", ing: ""}, {nom: "Club sandwich", ing: ""}, 
-        {nom: "Vol-au-vent", ing: ""}, {nom: "Burritos Bowl", ing: ""}, {nom: "Quesedillas", ing: ""}
-    ];
-
-
+    const R_BASE = ["Pâté chinois", "Poulet entier", "Belogne rôti", "Poke Bowl", "Sloppy Joe", "Général Tao", "Patate au jambon", "Filet de poisson", "Steak haché", "Burger poulet", "Filet de porc", "Guedille thon", "Boulette M&M", "Fajitas", "Saucisses sirop", "Casserole thon", "Spaghetti", "Poulet rouge", "Épaule porc", "Macaroni viande", "Boeuf coréen", "Poulet Parm", "Carbonara", "Mac & Cheese"];
+    const E_BASE = ["Lasagne", "Tortellini rosée", "Club sandwich", "Vol-au-vent", "Burritos Bowl", "Quesedillas"];
 
     document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
@@ -138,70 +122,50 @@
         document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
         document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
         document.getElementById("btn-sync-action").addEventListener("click", pousserVersCloudManuel);
-        
         let m = localStorage.getItem("code_famille_sauve");
         if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
     });
 
     function authentifierFamille() {
         let s = document.getElementById("input-code-famille").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
-        if (s.length < 3) { alert("L'identifiant doit contenir au moins 3 caractères."); return; }
+        if (s.length < 3) { alert("Min 3 car."); return; }
         codeFamilleActif = s; try { localStorage.setItem("code_famille_sauve", s); } catch(e) {}
         chargerMenuDepuisCloud();
     }
 
-
-
-
-
-     async function chargerMenuDepuisCloud() {
-        document.getElementById("ecran-login").style.display = "none";
-        document.getElementById("ecran-principal").style.display = "block";
+    async function chargerMenuDepuisCloud() {
+        document.getElementById("ecran-login").style.display = "none"; document.getElementById("ecran-principal").style.display = "block";
         document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
         document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
-            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
-                headers: { "X-Master-Key": MASTER_KEY } 
-            });
-            let paquet = await res.json();
-            
-            // CORRECTION VERSIONING : Lecture directe dans le coffre .record de jsonbin
-            let racine = paquet.record || paquet || {};
-            
+            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
+            let json = await res.json(); let racine = json.record || json || {};
             if (racine && racine[codeFamilleActif]) {
                 let b = racine[codeFamilleActif];
-                donneesFamille.semaines = b.semaines || JSON.parse(JSON.stringify(REPAS_DE_BASE));
-                donneesFamille.extras = b.extras || JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
-            } else {
-                // FILET DE SÉCURITÉ : Si la famille n'existe pas, on injecte TOUT de suite la base d'extras d'origine
-                donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
-                donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
-                await forcerEcritureDirecte();
-            }
-        } catch(err) {
-            donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE)); 
-            donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
-        }
-        document.getElementById("loading").style.display = "none"; 
-        afficherInterface();
+                donneesFamille.semaines = b.semaines; donneesFamille.extras = b.extras;
+            } else { initialiserDonnees(); await forcerEcritureDirecte(); }
+        } catch(err) { initialiserDonnees(); }
+        document.getElementById("loading").style.display = "none"; afficherInterface();
     }
 
-
-
+    function initialiserDonnees() {
+        donneesFamille.semaines = [[],[],[],[],[],[]];
+        for(let s=0; s<6; s++) { for(let r=0; r<4; r++) { donneesFamille.semaines[s].push({nom: R_BASE[s*4+r], ing: ""}); } }
+        donneesFamille.extras = E_BASE.map(n => ({nom: n, ing: ""}));
+    }
 
     async function pousserVersCloudManuel() {
         document.getElementById("loading").style.display = "block";
         let succes = await forcerEcritureDirecte();
         document.getElementById("loading").style.display = "none";
-        if (succes) { alert("💾 Changements enregistrés avec succès sur le Cloud !"); } 
-        else { alert("❌ Erreur lors de l'enregistrement."); }
+        alert(succes ? "💾 Changements enregistrés sur le Cloud !" : "❌ Erreur d'enregistrement.");
     }
 
     async function forcerEcritureDirecte() {
         try {
             let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
-            let jsonGlobal = await verif.json(); let baseC = jsonGlobal.record || jsonGlobal || {};
+            let jsonG = await verif.json(); let baseC = jsonG.record || jsonG || {};
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
             let rep = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
                 method: "PUT", headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, body: JSON.stringify(baseC)
@@ -221,10 +185,6 @@
         donneesFamille.semaines[sIdx][rIdx] = donneesFamille.extras[extraIdx]; donneesFamille.extras[extraIdx] = actuelMenu;
         afficherInterface();
     }
-
-
-
-
 
     function ouvrirIngredients(type, s, r, exIdx) {
         typePlatSelectionne = type; sIdxSelectionne = s; rIdxSelectionne = r; extraIdxSelectionne = exIdx;
@@ -283,7 +243,6 @@
 </script>
 </body>
 </html>
-
 
     
 
