@@ -120,7 +120,6 @@
     const BIN_EXTRAS_COLLECTIF = "6a43fe04da38895dfe17486b";
     // -----------------------------------------------------------------
 
-
     let codeFamilleActif = ""; let donneesFamille = { semaines: [], extras: [] };
     let typePlatSelectionne = "", sIdxSelectionne = 0, rIdxSelectionne = 0, extraIdxSelectionne = 0;
 
@@ -137,20 +136,14 @@
         {nom: "Vol-au-vent", ing: ""}, {nom: "Burritos Bowl", ing: ""}, {nom: "Quesedillas", ing: ""}
     ];
 
-
-    
-    
-      document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
         document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
         document.getElementById("btn-ajouter-action").addEventListener("click", ajouterNouveauRepas);
         document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
         document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
         document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
-        
-        // Relier le bouton vert à la relecture cloud manuelle
         document.getElementById("btn-sync-action").addEventListener("click", declencherSynchroManuelle);
-        
         let m = localStorage.getItem("code_famille_sauve");
         if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
     });
@@ -158,14 +151,10 @@
     function authentifierFamille() {
         let s = document.getElementById("input-code-famille").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
         if (s.length < 3) { alert("L'identifiant doit contenir au moins 3 caractères."); return; }
-        codeFamilleActif = s;
-        try { localStorage.setItem("code_famille_sauve", s); } catch(e) {}
+        codeFamilleActif = s; try { localStorage.setItem("code_famille_sauve", s); } catch(e) {}
         chargerMenuDepuisCloud();
     }
-
-    async function declencherSynchroManuelle() {
-        await chargerMenuDepuisCloud();
-    }
+    async function declencherSynchroManuelle() { await chargerMenuDepuisCloud(); }
 
 
 
@@ -173,22 +162,15 @@
 
 
 
-
-    
-
-     async function chargerMenuDepuisCloud() {
+    async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none";
         document.getElementById("ecran-principal").style.display = "block";
         document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
         document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
-            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
-                headers: { "X-Master-Key": MASTER_KEY } 
-            });
-            let json = await res.json();
-            let racine = json.record || json;
-            
+            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
+            let json = await res.json(); let racine = json.record || json;
             if (racine && racine[codeFamilleActif]) {
                 let b = racine[codeFamilleActif];
                 donneesFamille.semaines = b.semaines || JSON.parse(JSON.stringify(REPAS_DE_BASE));
@@ -198,95 +180,67 @@
                 donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
                 await pousserVersCloud();
             }
-        } catch(err) {
-            console.log("Erreur de raccordement");
-        }
-        document.getElementById("loading").style.display = "none"; 
-        afficherInterface();
+        } catch(err) { console.log("Erreur cloud"); }
+        document.getElementById("loading").style.display = "none"; afficherInterface();
     }
 
     async function pousserVersCloud() {
         try {
-            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
-                headers: { "X-Master-Key": MASTER_KEY } 
-            });
-            let jsonGlobal = await verif.json(); 
-            let baseC = jsonGlobal.record || jsonGlobal || {};
-            
+            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
+            let jsonGlobal = await verif.json(); let baseC = jsonGlobal.record || jsonGlobal || {};
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
-            
             await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
-                method: "PUT", 
-                headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, 
-                body: JSON.stringify(baseC)
+                method: "PUT", headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, body: JSON.stringify(baseC)
             });
         } catch(e) {}
     }
 
-    // CORRECTIONS APPLIQUÉES ICI : Ajout du mot-clé async indispensable pour valider l'envoi cloud
     async function ajouterNouveauRepas() {
-        let nomInput = document.getElementById("nouveauRepasNom");
-        let nom = nomInput.value.trim(); if (nom === "") return;
+        let nomInput = document.getElementById("nouveauRepasNom"); let nom = nomInput.value.trim(); if (nom === "") return;
         document.getElementById("loading").style.display = "block";
-        
-        donneesFamille.extras.push({ nom: nom, ing: "" }); 
-        nomInput.value = "";
-        
-        afficherInterface(); 
-        await pousserVersCloud(); 
-        document.getElementById("loading").style.display = "none";
+        donneesFamille.extras.push({ nom: nom, ing: "" }); nomInput.value = "";
+        afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
     }
 
     async function changerRepas(sIdx, rIdx, select) {
         let extraIdx = select.value; if (extraIdx === "") return;
-        let actuelMenu = donneesFamille.semaines[sIdx][rIdx];
-        document.getElementById("loading").style.display = "block";
-        
-        donneesFamille.semaines[sIdx][rIdx] = donneesFamille.extras[extraIdx];
-        donneesFamille.extras[extraIdx] = actuelMenu;
-        
-        afficherInterface(); 
-        await pousserVersCloud(); 
-        document.getElementById("loading").style.display = "none";
+        let actuelMenu = donneesFamille.semaines[sIdx][rIdx]; document.getElementById("loading").style.display = "block";
+        donneesFamille.semaines[sIdx][rIdx] = donneesFamille.extras[extraIdx]; donneesFamille.extras[extraIdx] = actuelMenu;
+        afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
     }
 
 
+    
+
+  
+
+
 
 
     
     
 
 
-      function ouvrirIngredients(type, s, r, exIdx) {
+    function ouvrirIngredients(type, s, r, exIdx) {
         typePlatSelectionne = type; sIdxSelectionne = s; rIdxSelectionne = r; extraIdxSelectionne = exIdx;
         let plat = (type === "semaine") ? donneesFamille.semaines[s][r] : donneesFamille.extras[exIdx];
-        document.getElementById("modal-titre").innerText = plat.nom;
-        document.getElementById("modal-texte").value = plat.ing || "";
+        document.getElementById("modal-titre").innerText = plat.nom; document.getElementById("modal-texte").value = plat.ing || "";
         document.getElementById("box-ingredients").style.display = "block";
     }
 
     async function sauverIngredients() {
-        let txt = document.getElementById("modal-texte").value.trim();
-        document.getElementById("loading").style.display = "block";
-        if (typePlatSelectionne === "semaine") {
-            donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne].ing = txt;
-        } else {
-            donneesFamille.extras[extraIdxSelectionne].ing = txt;
-        }
-        fermerFenetre();
-        afficherInterface();
-        await pousserVersCloud();
-        document.getElementById("loading").style.display = "none";
+        let txt = document.getElementById("modal-texte").value.trim(); document.getElementById("loading").style.display = "block";
+        if (typePlatSelectionne === "semaine") { donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne].ing = txt; } 
+        else { donneesFamille.extras[extraIdxSelectionne].ing = txt; }
+        fermerFenetre(); afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
     }
 
     function genererEpicerieSemaine(sIdx) {
-        document.getElementById("epicerie-titre").innerText = "🛒 Épicerie - Semaine " + (sIdx + 1);
-        let txt = "";
+        document.getElementById("epicerie-titre").innerText = "🛒 Épicerie - Semaine " + (sIdx + 1); let txt = "";
         donneesFamille.semaines[sIdx].forEach(r => {
             if (r && r.nom) txt += "🔹 " + r.nom.toUpperCase() + " :\n" + (r.ing && r.ing.trim() !== "" ? r.ing.trim() + "\n" : "(Aucun ingrédient inscrit)\n") + "\n-----------------------\n\n";
         });
-        document.getElementById("epicerie-corps").innerText = txt;
-        document.getElementById("box-epicerie").style.display = "block";
+        document.getElementById("epicerie-corps").innerText = txt; document.getElementById("box-epicerie").style.display = "block";
     }
 
     function deconnexion() { try { localStorage.removeItem("code_famille_sauve"); } catch(e) {} codeFamilleActif = ""; location.reload(); }
@@ -310,7 +264,7 @@
         document.getElementById("menu-grid").innerHTML = gridHtml;
         
         donneesFamille.semaines.forEach((sem, sIdx) => {
-            semaine.forEach((repas, rIdx) => {
+            sem.forEach((repas, rIdx) => {
                 document.getElementById(`nom-${sIdx}-${rIdx}`).addEventListener("click", () => ouvrirIngredients('semaine', sIdx, rIdx, 0));
                 document.getElementById(`sel-${sIdx}-${rIdx}`).addEventListener("change", (e) => changerRepas(sIdx, rIdx, e.target));
             });
@@ -325,6 +279,7 @@
 </script>
 </body>
 </html>
+
 
 
     
