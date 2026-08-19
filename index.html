@@ -144,13 +144,14 @@
 
 
 
-        async function chargerMenuDepuisCloud() {
+    async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none"; document.getElementById("ecran-principal").style.display = "block";
         document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
+        document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
-            // Lecture propre en ignorant les métadonnées pour lire directement le texte
-            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
+            // CORRECTIONS APPLIQUÉES : Ajout de ?nocache= unique et désactivation des métadonnées pour forcer jsonbin à renvoyer le vrai fichier neuf
+            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest?nocache=" + Date.now(), { 
                 headers: { "X-Master-Key": MASTER_KEY, "X-Bin-Meta": "false" } 
             });
             let json = await res.json();
@@ -171,17 +172,16 @@
 
     async function pousserVersCloud() {
         try {
-            // 1. Relecture globale sécurisée
-            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
+            // Relecture forcée sans cache de la base globale avant d'enregistrer pour préserver les voisins
+            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest?nocache=" + Date.now(), { 
                 headers: { "X-Master-Key": MASTER_KEY, "X-Bin-Meta": "false" } 
             });
             let jsonG = await verif.json(); 
             let baseC = jsonG.record || jsonG || {};
             
-            // 2. Fusion du tiroir de la famille active
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
             
-            // 3. CORRECTION : Ajout de la clé X-Master-Key et désactivation des métadonnées pour valider l'enregistrement PUT
+            // Écrasement forcé sur jsonbin de façon transparente
             await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
                 method: "PUT", 
                 headers: { 
