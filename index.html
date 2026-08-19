@@ -112,28 +112,7 @@
     let codeFamilleActif = ""; let donneesFamille = { semaines: [], extras: [] };
     let typePlatSelectionne = "", sIdxSelectionne = 0, rIdxSelectionne = 0, extraIdxSelectionne = 0;
 
-    document.addEventListener("DOMContentLoaded", () => {
-        document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
-        document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
-        document.getElementById("btn-ajouter-action").addEventListener("click", ajouterNouveauRepas);
-        document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
-        document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
-        document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
-        document.getElementById("btn-sync-action").addEventListener("click", () => chargerMenuDepuisCloud());
-        let m = localStorage.getItem("code_famille_sauve");
-        if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
-    });
-
-    function authentifierFamille() {
-        let s = document.getElementById("input-code-famille").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
-        if (s.length < 3) { alert("L'identifiant doit contenir au moins 3 caractères."); return; }
-        codeFamilleActif = s; try { localStorage.setItem("code_famille_sauve", s); } catch(e) {}
-        chargerMenuDepuisCloud();
-    }
-
-
-    
-        const REPAS_DE_BASE = [
+    const REPAS_DE_BASE = [
         [ {nom: "Pâté chinois", ing: ""}, {nom: "Poulet entier", ing: ""}, {nom: "Belogne rôti", ing: ""}, {nom: "Poke Bowl", ing: ""} ],
         [ {nom: "Sloppy Joe", ing: ""}, {nom: "Général Tao", ing: ""}, {nom: "Patate au jambon", ing: ""}, {nom: "Filet de poisson pané", ing: ""} ],
         [ {nom: "Steak haché en sauce", ing: ""}, {nom: "Burger poulet", ing: ""}, {nom: "Filet de porc", ing: ""}, {nom: "Guedille thon", ing: ""} ],
@@ -146,12 +125,38 @@
         {nom: "Vol-au-vent", ing: ""}, {nom: "Burritos Bowl", ing: ""}, {nom: "Quesedillas", ing: ""}
     ];
 
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
+        document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
+        document.getElementById("btn-ajouter-action").addEventListener("click", ajouterNouveauRepas);
+        document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
+        document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
+        document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
+        
+        // MODIFICATION : Le bouton vert appelle maintenant l'écriture forcée vers la BD
+        document.getElementById("btn-sync-action").innerText = "💾 Enregistrer sur le Cloud";
+        document.getElementById("btn-sync-action").addEventListener("click", pousserVersCloudManuel);
+        
+        let m = localStorage.getItem("code_famille_sauve");
+        if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
+    });
 
-    
+
+
+
+
+        function authentifierFamille() {
+        let s = document.getElementById("input-code-famille").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+        if (s.length < 3) { alert("L'identifiant doit contenir au moins 3 caractères."); return; }
+        codeFamilleActif = s; try { localStorage.setItem("code_famille_sauve", s); } catch(e) {}
+        chargerMenuDepuisCloud();
+    }
+
     async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none";
         document.getElementById("ecran-principal").style.display = "block";
         document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
+        document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
             let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
@@ -163,7 +168,7 @@
             } else {
                 donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
-                await pousserVersCloud();
+                await forcerEcritureDirecte();
             }
         } catch(err) {
             donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE)); donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
@@ -171,44 +176,53 @@
         document.getElementById("loading").style.display = "none"; afficherInterface();
     }
 
-    async function pousserVersCloud() {
+
+
+
+        async function pousserVersCloudManuel() {
+        document.getElementById("loading").style.display = "block";
+        let succes = await forcerEcritureDirecte();
+        document.getElementById("loading").style.display = "none";
+        if (succes) { alert("💾 Changements enregistrés avec succès sur le Cloud !"); } 
+        else { alert("❌ Erreur lors de l'enregistrement."); }
+    }
+
+    async function forcerEcritureDirecte() {
         try {
             let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
             let jsonGlobal = await verif.json(); let baseC = jsonGlobal.record || jsonGlobal || {};
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
-            await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
+            let rep = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
                 method: "PUT", headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, body: JSON.stringify(baseC)
             });
-        } catch(e) {}
+            return rep.ok;
+        } catch(e) { return false; }
     }
 
-    async function ajouterNouveauRepas() {
+    function ajouterNouveauRepas() {
         let nomInput = document.getElementById("nouveauRepasNom"); let nom = nomInput.value.trim(); if (nom === "") return;
-        document.getElementById("loading").style.display = "block";
-        donneesFamille.extras.push({ nom: nom, ing: "" }); nomInput.value = "";
-        afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
+        donneesFamille.extras.push({ nom: nom, ing: "" }); nomInput.value = ""; afficherInterface();
     }
 
-    async function changerRepas(sIdx, rIdx, select) {
+    function changerRepas(sIdx, rIdx, select) {
         let extraIdx = select.value; if (extraIdx === "") return;
-        let actuelMenu = donneesFamille.semaines[sIdx][rIdx]; document.getElementById("loading").style.display = "block";
+        let actuelMenu = donneesFamille.semaines[sIdx][rIdx];
         donneesFamille.semaines[sIdx][rIdx] = donneesFamille.extras[extraIdx]; donneesFamille.extras[extraIdx] = actuelMenu;
-        afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
+        afficherInterface();
     }
 
     function ouvrirIngredients(type, s, r, exIdx) {
         typePlatSelectionne = type; sIdxSelectionne = s; rIdxSelectionne = r; extraIdxSelectionne = exIdx;
         let plat = (type === "semaine") ? donneesFamille.semaines[s][r] : donneesFamille.extras[exIdx];
         document.getElementById("box-ingredients").querySelector("h2").innerText = plat.nom;
-        document.getElementById("modal-texte").value = plat.ing || "";
-        document.getElementById("box-ingredients").style.display = "block";
+        document.getElementById("modal-texte").value = plat.ing || ""; document.getElementById("box-ingredients").style.display = "block";
     }
 
-    async function sauverIngredients() {
-        let txt = document.getElementById("modal-texte").value.trim(); document.getElementById("loading").style.display = "block";
+    function sauverIngredients() {
+        let txt = document.getElementById("modal-texte").value.trim();
         if (typePlatSelectionne === "semaine") { donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne].ing = txt; } 
         else { donneesFamille.extras[extraIdxSelectionne].ing = txt; }
-        fermerFenetre(); afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
+        fermerFenetre(); afficherInterface();
     }
 
     function genererEpicerieSemaine(sIdx) {
@@ -232,13 +246,13 @@
                 let spanId = `nom-${sIdx}-${rIdx}`, selId = `sel-${sIdx}-${rIdx}`;
                 gridHtml += `<div class="repas-block"><div class="repas-header"><span class="repas-nom" id="${spanId}">${nomAff}</span>`;
                 gridHtml += `<select class="select-echange" id="${selId}"><option value="" disabled selected>🔄</option>`;
-                donneesFamille.extras.forEach((ex, exIdx) => { gridHtml += `<option value="${exIdx}">${ex.nom}</option>`; });
+                donneesFamille.extras.forEach((ex, exIdx) => { gridHtml += '<option value="' + exIdx + '">' + ex.nom + '</option>'; });
                 gridHtml += '</select></div></div>';
             });
-            gridHtml += `</div><button class="btn-epicerie" id="btn-epi-${sIdx}">🛒 Liste d'épicerie</button></div>`;
+            gridHtml += '</div><button class="btn-epicerie" id="btn-epi-' + sIdx + '">🛒 Liste d\'épicerie</button></div>';
         });
         document.getElementById("menu-grid").innerHTML = gridHtml;
-        donneesFamille.semaines.forEach((sem, sIdx) => {
+        semaines.forEach((sem, sIdx) => {
             sem.forEach((repas, rIdx) => {
                 document.getElementById(`nom-${sIdx}-${rIdx}`).addEventListener("click", () => ouvrirIngredients('semaine', sIdx, rIdx, 0));
                 document.getElementById(`sel-${sIdx}-${rIdx}`).addEventListener("change", (e) => changerRepas(sIdx, rIdx, e.target));
