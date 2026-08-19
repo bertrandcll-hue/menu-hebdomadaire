@@ -140,7 +140,7 @@
 
     
     
-    document.addEventListener("DOMContentLoaded", () => {
+      document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
         document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
         document.getElementById("btn-ajouter-action").addEventListener("click", ajouterNouveauRepas);
@@ -148,7 +148,7 @@
         document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
         document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
         
-        // Association propre du bouton vert pour relancer la relecture
+        // Relier le bouton vert à la relecture cloud manuelle
         document.getElementById("btn-sync-action").addEventListener("click", declencherSynchroManuelle);
         
         let m = localStorage.getItem("code_famille_sauve");
@@ -173,6 +173,7 @@
 
 
 
+
     
 
      async function chargerMenuDepuisCloud() {
@@ -182,6 +183,7 @@
         document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
+            // Lecture brute de la dernière version du fichier global
             let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
                 headers: { "X-Master-Key": MASTER_KEY } 
             });
@@ -193,12 +195,14 @@
                 donneesFamille.semaines = b.semaines || JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = b.extras || JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
             } else {
+                // Initialisation neuve et propre si le tiroir de cette famille n'existe pas encore
                 donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
                 await pousserVersCloud();
             }
         } catch(err) {
-            console.log("Erreur de raccordement");
+            donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
+            donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
         }
         document.getElementById("loading").style.display = "none"; 
         afficherInterface();
@@ -212,7 +216,7 @@
             let jsonGlobal = await verif.json(); 
             let baseC = jsonGlobal.record || jsonGlobal || {};
             
-            // CORRECTION FAITE ICI : Utilisation stricte de baseC
+            // LOGIQUE FIXÉE : Utilisation exclusive et certifiée de la variable baseC
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
             
             await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
@@ -222,6 +226,7 @@
             });
         } catch(e) {}
     }
+
 
 
 
