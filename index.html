@@ -137,7 +137,10 @@
         {nom: "Vol-au-vent", ing: ""}, {nom: "Burritos Bowl", ing: ""}, {nom: "Quesedillas", ing: ""}
     ];
 
-     document.addEventListener("DOMContentLoaded", () => {
+
+    
+    
+    document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
         document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
         document.getElementById("btn-ajouter-action").addEventListener("click", ajouterNouveauRepas);
@@ -145,8 +148,8 @@
         document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
         document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
         
-        // CORRECTION : Association du bouton au clic pour forcer le chargement du cloud
-        document.getElementById("btn-sync-action").addEventListener("click", chargerMenuDepuisCloud);
+        // CORRECTION : Le bouton appelle une fonction dédiée pour éviter les conflits de rechargement
+        document.getElementById("btn-sync-action").addEventListener("click", declencherSynchroManuelle);
         
         let m = localStorage.getItem("code_famille_sauve");
         if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
@@ -159,6 +162,12 @@
         try { localStorage.setItem("code_famille_sauve", s); } catch(e) {}
         chargerMenuDepuisCloud();
     }
+
+    async function declencherSynchroManuelle() {
+        // Force une attente et télécharge la version certifiée du nuage
+        await chargerMenuDepuisCloud();
+    }
+
 
 
 
@@ -173,40 +182,50 @@
         document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
-            // CORRECTION ANTI-CACHE : L'adresse intègre l'heure exacte en millisecondes pour forcer jsonbin à renvoyer le vrai fichier à jour
-            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest?nocache=" + Date.now(), { 
+            // Lecture stricte avec blocage réseau pour interdire le retour aux repas par défaut
+            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
                 headers: { "X-Master-Key": MASTER_KEY } 
             });
+            
+            // CORRECTION CRITIQUE : On force l'ordinateur à attendre d'avoir décodé le fichier complet
             let json = await res.json();
             let racine = json.record || json;
             
-            if (!racine || !racine[codeFamilleActif]) {
-                donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
-                donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
-                await pousserVersCloud();
-            } else {
+            if (racine && racine[codeFamilleActif]) {
                 let b = racine[codeFamilleActif];
                 donneesFamille.semaines = b.semaines || JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = b.extras || JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
+            } else {
+                // Si la famille n'existe vraiment pas, on génère le premier espace propre
+                donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
+                donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
+                await pousserVersCloud();
             }
         } catch(err) {
-            donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE)); donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
+            console.log("Erreur réseau");
         }
-        document.getElementById("loading").style.display = "none"; afficherInterface();
+        document.getElementById("loading").style.display = "none"; 
+        afficherInterface();
     }
 
     async function pousserVersCloud() {
         try {
-            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest?nocache=" + Date.now(), { 
+            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
                 headers: { "X-Master-Key": MASTER_KEY } 
             });
-            let jsonGlobal = await verif.json(); let baseC = jsonGlobal.record || jsonGlobal || {};
-            baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
+            let jsonGlobal = await verif.json(); 
+            let baseC = jsonGlobal.record || jsonGlobal || {};
+            
+            baseComplete[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
+            
             await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
-                method: "PUT", headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, body: JSON.stringify(baseC)
+                method: "PUT", 
+                headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, 
+                body: JSON.stringify(baseC)
             });
         } catch(e) {}
     }
+
 
 
 
