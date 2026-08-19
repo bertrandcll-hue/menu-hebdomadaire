@@ -109,8 +109,11 @@
     // -----------------------------------------------------------------
 
 
-    let codeFamilleActif = ""; let donneesFamille = { semaines: [], extras: [] };
+    let codeFamilleActif = ""; 
+    let donneesFamille = { semaines: [], extras: [] };
     let typePlatSelectionne = "", sIdxSelectionne = 0, rIdxSelectionne = 0, extraIdxSelectionne = 0;
+
+
 
     const REPAS_DE_BASE = [
         [ {nom: "Pâté chinois", ing: ""}, {nom: "Poulet entier", ing: ""}, {nom: "Belogne rôti", ing: ""}, {nom: "Poke Bowl", ing: ""} ],
@@ -125,6 +128,8 @@
         {nom: "Vol-au-vent", ing: ""}, {nom: "Burritos Bowl", ing: ""}, {nom: "Quesedillas", ing: ""}
     ];
 
+
+
     document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
         document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
@@ -132,17 +137,11 @@
         document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
         document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
         document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
-        
-        // MODIFICATION : Le bouton vert appelle maintenant l'écriture forcée vers la BD
-        document.getElementById("btn-sync-action").innerText = "💾 Enregistrer sur le Cloud";
         document.getElementById("btn-sync-action").addEventListener("click", pousserVersCloudManuel);
         
         let m = localStorage.getItem("code_famille_sauve");
         if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
     });
-
-
-
 
     function authentifierFamille() {
         let s = document.getElementById("input-code-famille").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
@@ -155,7 +154,6 @@
 
 
 
-    
     async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none";
         document.getElementById("ecran-principal").style.display = "block";
@@ -180,6 +178,8 @@
         document.getElementById("loading").style.display = "none"; afficherInterface();
     }
 
+
+
     async function pousserVersCloudManuel() {
         document.getElementById("loading").style.display = "block";
         let succes = await forcerEcritureDirecte();
@@ -192,10 +192,7 @@
         try {
             let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
             let jsonGlobal = await verif.json(); let baseC = jsonGlobal.record || jsonGlobal || {};
-            
-            // CORRECTION CRITIQUE APPLIQUÉE ICI : baseC utilisé à 100% au lieu de baseComplete
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
-            
             let rep = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
                 method: "PUT", headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, body: JSON.stringify(baseC)
             });
@@ -203,13 +200,7 @@
         } catch(e) { return false; }
     }
 
-
-
-
-
-
-
-        function ajouterNouveauRepas() {
+    function ajouterNouveauRepas() {
         let nomInput = document.getElementById("nouveauRepasNom"); let nom = nomInput.value.trim(); if (nom === "") return;
         donneesFamille.extras.push({ nom: nom, ing: "" }); nomInput.value = ""; afficherInterface();
     }
@@ -220,6 +211,10 @@
         donneesFamille.semaines[sIdx][rIdx] = donneesFamille.extras[extraIdx]; donneesFamille.extras[extraIdx] = actuelMenu;
         afficherInterface();
     }
+
+
+
+
 
     function ouvrirIngredients(type, s, r, exIdx) {
         typePlatSelectionne = type; sIdxSelectionne = s; rIdxSelectionne = r; extraIdxSelectionne = exIdx;
@@ -253,10 +248,9 @@
             gridHtml += '<div class="card"><div><h3>Semaine ' + (sIdx + 1) + '</h3>';
             sem.forEach((repas, rIdx) => {
                 let nomAff = (repas && repas.nom) ? repas.nom : "Repas libre";
-                let spanId = `nom-${sIdx}-${rIdx}`, selId = `sel-${sIdx}-${rIdx}`;
-                gridHtml += `<div class="repas-block"><div class="repas-header"><span class="repas-nom" id="${spanId}">${nomAff}</span>`;
-                gridHtml += `<select class="select-echange" id="${selId}"><option value="" disabled selected>🔄</option>`;
-                donneesFamille.extras.forEach((ex, exIdx) => { gridHtml += '<option value="' + exIdx + '">' + ex.nom + '</option>'; });
+                gridHtml += `<div class="repas-block"><div class="repas-header"><span class="repas-nom" id="nom-${sIdx}-${rIdx}">${nomAff}</span>`;
+                gridHtml += `<select class="select-echange" id="sel-${sIdx}-${rIdx}"><option value="" disabled selected>🔄</option>`;
+                donneesFamille.extras.forEach((ex, exIdx) => { gridHtml += `<option value="${exIdx}">${ex.nom}</option>`; });
                 gridHtml += '</select></div></div>';
             });
             gridHtml += `</div><button class="btn-epicerie" id="btn-epi-${sIdx}">🛒 Liste d'épicerie</button></div>`;
@@ -280,3 +274,11 @@
 </body>
 </html>
 
+
+    
+
+    
+    
+    
+
+    
