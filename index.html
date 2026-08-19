@@ -48,6 +48,7 @@
 
 
 
+
 <body>
 <!-- Écran de Connexion -->
 <div id="ecran-login" class="login-box">
@@ -105,6 +106,7 @@
 
 
 
+
 <script>
     // -----------------------------------------------------------------
     // ACCÈS TECHNIQUE SÉCURISÉ JSONBIN :
@@ -112,6 +114,7 @@
     const MASTER_KEY = "$2a$10$byE8Ka5bI4s4RgiwPxWSPeMjgc18UeBrHYommbd56GAcJzL95AZce";
     const BIN_EXTRAS_COLLECTIF = "6a43fe04da38895dfe17486b";
     // -----------------------------------------------------------------
+
 
     let codeFamilleActif = "";
     let donneesFamille = { semaines: [], extras: [] };
@@ -152,19 +155,17 @@
     }
 
 
+
+
     async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none";
         document.getElementById("ecran-principal").style.display = "block";
         document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
         document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
-
         try {
-            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", {
-                headers: { "X-Master-Key": MASTER_KEY }
-            });
+            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
             let json = await res.json();
-            
             if (!json.record || !json.record[codeFamilleActif]) {
                 donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
@@ -178,67 +179,38 @@
             donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
             donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
         }
-        document.getElementById("loading").style.display = "none";
-        afficherInterface();
+        document.getElementById("loading").style.display = "none"; afficherInterface();
     }
 
-
-
-    
-
-
-
-### <!-- 📦 BLOC 4 : SAUVEGARDES AVEC SYNC 'PUT' ET RECONSTRUCTION DES GRILLES -->
-
-```javascript
     async function pousserVersCloud() {
         try {
-            // 1. Lire d'abord l'ancien bin global pour conserver le classeur des autres familles
-            let verification = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", {
-                headers: { "X-Master-Key": MASTER_KEY }
-            });
+            let verification = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
             let documentGlobal = await verification.json();
             let baseComplete = documentGlobal.record || {};
-            
-            // 2. Mettre à jour uniquement la boîte de la famille active
-            baseComplete[codeFamilleActif] = {
-                semaines: donneesFamille.semaines,
-                extras: donneesFamille.extras
-            };
-
-            // 3. Écraser l'ancien fichier via PUT (Garantit la synchro universelle instantanée)
+            baseComplete[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
             await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY },
-                body: JSON.stringify(baseComplete)
+                method: "PUT", headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY }, body: JSON.stringify(baseComplete)
             });
         } catch(e) {}
     }
+
+
 
     async function ajouterNouveauRepas() {
         let nomInput = document.getElementById("nouveauRepasNom");
         let nom = nomInput.value.trim(); if (nom === "") return;
         document.getElementById("loading").style.display = "block";
-        
-        donneesFamille.extras.push({ nom: nom, ing: "" });
-        nomInput.value = "";
-        
-        afficherInterface();
-        await pousserVersCloud();
-        document.getElementById("loading").style.display = "none";
+        donneesFamille.extras.push({ nom: nom, ing: "" }); nomInput.value = "";
+        afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
     }
 
     async function changerRepas(sIdx, rIdx, select) {
         let extraIdx = select.value; if (extraIdx === "") return;
         let actuelMenu = donneesFamille.semaines[sIdx][rIdx];
         document.getElementById("loading").style.display = "block";
-        
         donneesFamille.semaines[sIdx][rIdx] = donneesFamille.extras[extraIdx];
         donneesFamille.extras[extraIdx] = actuelMenu;
-        
-        afficherInterface();
-        await pousserVersCloud();
-        document.getElementById("loading").style.display = "none";
+        afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
     }
 
     function ouvrirIngredients(type, s, r, exIdx) {
@@ -252,18 +224,13 @@
     async function sauverIngredients() {
         let txt = document.getElementById("modal-texte").value.trim();
         document.getElementById("loading").style.display = "block";
-        
-        if (typePlatSelectionne === "semaine") {
-            donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne].ing = txt;
-        } else {
-            donneesFamille.extras[extraIdxSelectionne].ing = txt;
-        }
-        
-        fermerFenetre();
-        afficherInterface();
-        await pousserVersCloud();
-        document.getElementById("loading").style.display = "none";
+        if (typePlatSelectionne === "semaine") { donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne].ing = txt; } 
+        else { donneesFamille.extras[extraIdxSelectionne].ing = txt; }
+        fermerFenetre(); afficherInterface(); await pousserVersCloud(); document.getElementById("loading").style.display = "none";
     }
+
+
+
 
     function genererEpicerieSemaine(sIdx) {
         document.getElementById("epicerie-titre").innerText = "🛒 Épicerie - Semaine " + (sIdx + 1);
@@ -276,11 +243,7 @@
         document.getElementById("epicerie-corps").innerText = txt; document.getElementById("box-epicerie").style.display = "block";
     }
 
-    function deconnexion() {
-        try { localStorage.removeItem("code_famille_sauve"); } catch(e) {}
-        codeFamilleActif = ""; location.reload();
-    }
-
+    function deconnexion() { try { localStorage.removeItem("code_famille_sauve"); } catch(e) {} codeFamilleActif = ""; location.reload(); }
     function fermerFenetre() { document.getElementById("box-ingredients").style.display = "none"; }
     function fermerEpicerie() { document.getElementById("box-epicerie").style.display = "none"; }
 
@@ -316,3 +279,8 @@
 </script>
 </body>
 </html>
+
+    
+    
+
+    
