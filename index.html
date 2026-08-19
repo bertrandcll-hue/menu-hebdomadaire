@@ -154,29 +154,39 @@
 
 
 
-    async function chargerMenuDepuisCloud() {
+     async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none";
         document.getElementById("ecran-principal").style.display = "block";
         document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
         document.getElementById("titre-principal").innerText = "Planificateur - " + codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
-            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { headers: { "X-Master-Key": MASTER_KEY } });
-            let json = await res.json(); let racine = json.record || json;
+            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
+                headers: { "X-Master-Key": MASTER_KEY } 
+            });
+            let paquet = await res.json();
+            
+            // CORRECTION VERSIONING : Lecture directe dans le coffre .record de jsonbin
+            let racine = paquet.record || paquet || {};
+            
             if (racine && racine[codeFamilleActif]) {
                 let b = racine[codeFamilleActif];
                 donneesFamille.semaines = b.semaines || JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = b.extras || JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
             } else {
+                // FILET DE SÉCURITÉ : Si la famille n'existe pas, on injecte TOUT de suite la base d'extras d'origine
                 donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE));
                 donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
                 await forcerEcritureDirecte();
             }
         } catch(err) {
-            donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE)); donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
+            donneesFamille.semaines = JSON.parse(JSON.stringify(REPAS_DE_BASE)); 
+            donneesFamille.extras = JSON.parse(JSON.stringify(EXTRAS_DE_BASE));
         }
-        document.getElementById("loading").style.display = "none"; afficherInterface();
+        document.getElementById("loading").style.display = "none"; 
+        afficherInterface();
     }
+
 
 
 
