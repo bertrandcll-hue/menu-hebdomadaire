@@ -111,7 +111,8 @@
     // ACCÈS TECHNIQUE SÉCURISÉ JSONBIN :
     // -----------------------------------------------------------------
     const MASTER_KEY = "$2a$10$byE8Ka5bI4s4RgiwPxWSPeMjgc18UeBrHYommbd56GAcJzL95AZce";
-    const BIN_EXTRAS_COLLECTIF = "6a43fe04da38895dfe17486b";
+    const BIN_ID = "6a43fe04da38895dfe17486b";
+    const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
     // -----------------------------------------------------------------
 
 
@@ -151,9 +152,11 @@
         document.getElementById("loading").style.display = "block";
         try {
             // Lecture forcée en direct sans cache
-            let res = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
-                headers: { "X-Master-Key": MASTER_KEY } 
+            let res = await fetch(`${JSONBIN_URL}/latest`, {
+                headers: { "X-Master-Key": MASTER_KEY },
+                cache: "no-store"
             });
+            if (!res.ok) throw new Error(`JSONBin lecture HTTP ${res.status}`);
             let paquet = await res.json();
             
             // Correction de lecture pour s'adapter au versionning manuel de votre compte
@@ -167,8 +170,10 @@
                 initialiserDonnees(); 
                 await pousserVersCloud(); 
             }
-        } catch(err) { 
-            initialiserDonnees(); 
+        } catch(err) {
+            console.error("Erreur de lecture JSONBin:", err);
+            initialiserDonnees();
+            alert("Impossible de lire les données du cloud. Le menu local par défaut est affiché.");
         }
         document.getElementById("loading").style.display = "none"; 
         afficherInterface();
@@ -187,24 +192,35 @@
     async function pousserVersCloud() {
         try {
             // Relecture de la base globale pour ne pas effacer les autres familles
-            let verif = await fetch("https://jsonbin.io" + BIN_ID_UNIQUE + "/latest", { 
-                headers: { "X-Master-Key": MASTER_KEY } 
+            let verif = await fetch(`${JSONBIN_URL}/latest`, {
+                headers: { "X-Master-Key": MASTER_KEY },
+                cache: "no-store"
             });
+            if (!verif.ok) throw new Error(`JSONBin lecture avant sauvegarde HTTP ${verif.status}`);
             let jsonG = await verif.json(); 
             let baseC = jsonG.record || jsonG || {};
             
             baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
             
             // Envoi de la nouvelle version avec écrasement PUT propre
-            await fetch("https://jsonbin.io" + BIN_ID_UNIQUE, {
-                method: "PUT", 
-                headers: { 
-                    "Content-Type": "application/json", 
+            let sauvegarde = await fetch(JSONBIN_URL, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
                     "X-Master-Key": MASTER_KEY
-                }, 
+                },
                 body: JSON.stringify(baseC)
             });
-        } catch(e) {}
+
+            if (!sauvegarde.ok) {
+                const detail = await sauvegarde.text();
+                throw new Error(`JSONBin sauvegarde HTTP ${sauvegarde.status}: ${detail}`);
+            }
+        } catch(e) {
+            console.error("Erreur de synchronisation JSONBin:", e);
+            alert("La sauvegarde dans le cloud a échoué. Vérifiez la console du navigateur.");
+            throw e;
+        }
     }
 
     async function ajouterNouveauRepas() {
@@ -296,4 +312,3 @@
 </script>
 </body>
 </html>
-
