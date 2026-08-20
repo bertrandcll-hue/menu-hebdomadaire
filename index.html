@@ -47,9 +47,13 @@
 <body>
 <div id="ecran-login" class="login-box">
     <h2>🔑 Accès Planificateur</h2>
-    <p>Entrez l'identifiant unique de votre famille pour synchroniser vos appareils.</p>
-    <input type="text" id="input-code-famille" placeholder="Ex: famille-tremblay">
-    <button class="btn-login" id="btn-login-action">Ouvrir notre menu</button>
+    <p id="login-instruction">Connectez-vous à votre famille pour synchroniser vos appareils.</p>
+    <input type="text" id="input-code-famille" placeholder="Nom de la famille">
+    <input type="password" id="input-password-famille" placeholder="Mot de passe">
+    <input type="password" id="input-password-confirm" placeholder="Confirmer le mot de passe" style="display:none;">
+    <button class="btn-login" id="btn-login-action">Se connecter</button>
+    <button class="btn-login" id="btn-creer-famille" style="background-color:#27ae60; margin-top:10px;">Créer une nouvelle famille</button>
+    <button class="btn-login" id="btn-annuler-creation" style="display:none; background-color:#95a5a6; margin-top:10px;">Annuler</button>
 </div>
 <div id="ecran-principal" class="container" style="display: none;">
     <div class="logout-zone">
@@ -118,6 +122,7 @@
 
 
     let codeFamilleActif = ""; let donneesFamille = { semaines: [], extras: [] };
+    let modeCreationFamille = false;
     let typePlatSelectionne = "", sIdxSelectionne = 0, rIdxSelectionne = 0, extraIdxSelectionne = 0;
 
     const R_BASE = ["Pâté chinois", "Poulet entier", "Belogne rôti", "Poke Bowl", "Sloppy Joe", "Général Tao", "Patate au jambon", "Filet de poisson", "Steak haché", "Burger poulet", "Filet de porc", "Guedille thon", "Boulette M&M", "Fajitas", "Saucisses sirop", "Casserole thon", "Spaghetti", "Poulet rouge", "Épaule porc", "Macaroni viande", "Boeuf coréen", "Poulet Parm", "Carbonara", "Mac & Cheese"];
@@ -125,25 +130,83 @@
 
     document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
+        document.getElementById("btn-creer-famille").addEventListener("click", preparerCreationFamille);
+        document.getElementById("btn-annuler-creation").addEventListener("click", annulerCreationFamille);
         document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
         document.getElementById("btn-ajouter-action").addEventListener("click", ajouterNouveauRepas);
         document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
         document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
         document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
         let m = localStorage.getItem("code_famille_sauve");
-        if (m) { codeFamilleActif = m; chargerMenuDepuisCloud(); }
+        let session = localStorage.getItem("session_famille_auth");
+        if (m && session === "1") { codeFamilleActif = m; chargerMenuDepuisCloud(); }
     });
 
-    function authentifierFamille() {
-        let s = document.getElementById("input-code-famille").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
-        if (s.length < 3) { alert("Min 3 car."); return; }
-        codeFamilleActif = s; try { localStorage.setItem("code_famille_sauve", s); } catch(e) {}
-        chargerMenuDepuisCloud();
+    function preparerCreationFamille() {
+        modeCreationFamille = true;
+        document.getElementById("login-instruction").innerText = "Créez une nouvelle famille. Le nom doit être unique.";
+        document.getElementById("input-password-confirm").style.display = "block";
+        document.getElementById("btn-login-action").innerText = "Créer la famille";
+        document.getElementById("btn-creer-famille").style.display = "none";
+        document.getElementById("btn-annuler-creation").style.display = "block";
     }
 
+    function annulerCreationFamille() {
+        modeCreationFamille = false;
+        document.getElementById("login-instruction").innerText = "Connectez-vous à votre famille pour synchroniser vos appareils.";
+        document.getElementById("input-password-confirm").style.display = "none";
+        document.getElementById("input-password-confirm").value = "";
+        document.getElementById("input-password-famille").value = "";
+        document.getElementById("btn-login-action").innerText = "Se connecter";
+        document.getElementById("btn-creer-famille").style.display = "block";
+        document.getElementById("btn-annuler-creation").style.display = "none";
+    }
 
+    async function authentifierFamille() {
+        let s = document.getElementById("input-code-famille").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+        let password = document.getElementById("input-password-famille").value;
+        if (s.length < 3) { alert("Le nom de famille doit contenir au moins 3 caractères."); return; }
+        if (password.length < 4) { alert("Le mot de passe doit contenir au moins 4 caractères."); return; }
+        if (modeCreationFamille && password !== document.getElementById("input-password-confirm").value) { alert("Les mots de passe ne correspondent pas."); return; }
+        const btn = document.getElementById("btn-login-action"); btn.disabled = true;
+        try {
+            let res = await fetch(`${JSONBIN_URL}/latest`, { headers: { "X-Master-Key": MASTER_KEY }, cache: "no-store" });
+            if (!res.ok) throw new Error(`JSONBin lecture HTTP ${res.status}`);
+            let paquet = await res.json();
+            let baseC = paquet.record || paquet || {};
+            let famille = baseC[s];
+            if (modeCreationFamille) {
+                if (famille) { alert("Cette famille existe déjà. Veuillez choisir un autre nom."); return; }
+                let hash = await hacherMotDePasse(password);
+                baseC[s] = { passwordHash: hash, semaines: [], extras: [] };
+                initialiserDonneesPour(baseC[s]);
+                let save = await fetch(JSONBIN_URL, { method:"PUT", headers:{"Content-Type":"application/json","X-Master-Key":MASTER_KEY}, body:JSON.stringify(baseC) });
+                if (!save.ok) throw new Error(`JSONBin création HTTP ${save.status}`);
+                codeFamilleActif=s; donneesFamille.semaines=baseC[s].semaines; donneesFamille.extras=baseC[s].extras;
+                localStorage.setItem("code_famille_sauve",s); localStorage.setItem("session_famille_auth","1");
+                afficherInterface(); document.getElementById("ecran-login").style.display="none"; document.getElementById("ecran-principal").style.display="block"; document.getElementById("affichage-code-actif").innerText=s.toUpperCase(); return;
+            }
+            if (!famille) { alert("Cette famille n'existe pas."); return; }
+            if (!famille.passwordHash) { alert("Cette famille a été créée avec l'ancienne version et n'a pas encore de mot de passe."); return; }
+            if (await hacherMotDePasse(password) !== famille.passwordHash) { alert("Mot de passe incorrect."); return; }
+            codeFamilleActif=s; donneesFamille.semaines=famille.semaines || []; donneesFamille.extras=famille.extras || [];
+            localStorage.setItem("code_famille_sauve",s); localStorage.setItem("session_famille_auth","1");
+            await chargerMenuDepuisCloud();
+        } catch(e) { console.error(e); alert("Impossible de communiquer avec le cloud."); }
+        finally { btn.disabled=false; }
+    }
 
+    function initialiserDonneesPour(famille) {
+        famille.semaines=[[],[],[],[],[],[]];
+        for(let s=0;s<6;s++) for(let r=0;r<4;r++) famille.semaines[s].push({nom:R_BASE[s*4+r],ing:""});
+        famille.extras=E_BASE.map(n=>({nom:n,ing:""}));
+    }
 
+    async function hacherMotDePasse(password) {
+        const data=new TextEncoder().encode(password);
+        const hash=await crypto.subtle.digest("SHA-256",data);
+        return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("");
+    }
 
     async function chargerMenuDepuisCloud() {
         document.getElementById("ecran-login").style.display = "none"; 
@@ -200,7 +263,7 @@
             let jsonG = await verif.json(); 
             let baseC = jsonG.record || jsonG || {};
             
-            baseC[codeFamilleActif] = { semaines: donneesFamille.semaines, extras: donneesFamille.extras };
+            baseC[codeFamilleActif] = { passwordHash: (baseC[codeFamilleActif] || {}).passwordHash, semaines: donneesFamille.semaines, extras: donneesFamille.extras };
             
             // Envoi de la nouvelle version avec écrasement PUT propre
             let sauvegarde = await fetch(JSONBIN_URL, {
@@ -277,7 +340,7 @@
         document.getElementById("box-epicerie").style.display = "block";
     }
 
-    function deconnexion() { try { localStorage.removeItem("code_famille_sauve"); } catch(e) {} codeFamilleActif = ""; location.reload(); }
+    function deconnexion() { try { localStorage.removeItem("code_famille_sauve"); localStorage.removeItem("session_famille_auth"); } catch(e) {} codeFamilleActif = ""; location.reload(); }
     function fermerFenetre() { document.getElementById("box-ingredients").style.display = "none"; }
     function fermerEpicerie() { document.getElementById("box-epicerie").style.display = "none"; }
 
