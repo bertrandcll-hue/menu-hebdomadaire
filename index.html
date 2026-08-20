@@ -49,7 +49,7 @@
     <h2>🔑 Accès Planificateur</h2>
     <p id="login-instruction">Connectez-vous à votre famille pour synchroniser vos appareils.</p>
     <input type="text" id="input-code-famille" placeholder="Nom de la famille">
-    <input type="password" id="input-password-famille" placeholder="Mot de passe">
+    <input type="password" id="input-password-famille" placeholder="Mot de passe (8 caractères minimum)">
     <input type="password" id="input-password-confirm" placeholder="Confirmer le mot de passe" style="display:none;">
     <button class="btn-login" id="btn-login-action">Se connecter</button>
     <button class="btn-login" id="btn-creer-famille" style="background-color:#27ae60; margin-top:10px;">Créer une nouvelle famille</button>
@@ -58,7 +58,10 @@
 <div id="ecran-principal" class="container" style="display: none;">
     <div class="logout-zone">
         <span>🏠 Espace Synchro : <strong id="affichage-code-actif"></strong></span>
-        <button class="btn-logout" id="btn-logout-action">Changer de famille</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn-logout" id="btn-changer-mdp-action" style="background:#8e44ad;">🔐 Changer le mot de passe</button>
+            <button class="btn-logout" id="btn-logout-action">Changer de famille</button>
+        </div>
     </div>
     <h1>Mon Planificateur de Soupers</h1>
     <p class="instruction">Les repas ajoutés vont dans les extras. Vos choix sont automatiquement partagés entre vos appareils.</p>
@@ -73,7 +76,20 @@
         <div id="extras-liste" class="extra-box"></div>
     </div>
 </div>
-<div id="box-ingredients" class="modal">
+<div id="box-motdepasse" class="modal">
+    <div class="modal-box">
+        <button class="btn-close" id="btn-fermer-mdp-action">Fermer</button>
+        <h2>🔐 Changer le mot de passe</h2>
+        <input type="password" id="ancien-password" placeholder="Mot de passe actuel"
+               style="width:100%;padding:12px;box-sizing:border-box;margin:10px 0;border:1px solid #ccc;border-radius:6px;">
+        <input type="password" id="nouveau-password" placeholder="Nouveau mot de passe (8 caractères minimum)"
+               style="width:100%;padding:12px;box-sizing:border-box;margin:10px 0;border:1px solid #ccc;border-radius:6px;">
+        <input type="password" id="nouveau-password-confirm" placeholder="Confirmer le nouveau mot de passe"
+               style="width:100%;padding:12px;box-sizing:border-box;margin:10px 0;border:1px solid #ccc;border-radius:6px;">
+        <button class="btn-action" id="btn-sauver-mdp-action">💾 Enregistrer le nouveau mot de passe</button>
+    </div>
+</div>
+
     <div class="modal-box">
         <button class="btn-close" id="btn-fermer-ing-action">Fermer</button>
         <h2>Ingrédients</h2>
@@ -119,8 +135,6 @@
     const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
     // -----------------------------------------------------------------
 
-
-
     let codeFamilleActif = ""; let donneesFamille = { semaines: [], extras: [] };
     let modeCreationFamille = false;
     let typePlatSelectionne = "", sIdxSelectionne = 0, rIdxSelectionne = 0, extraIdxSelectionne = 0;
@@ -132,19 +146,22 @@
         document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
         document.getElementById("btn-creer-famille").addEventListener("click", preparerCreationFamille);
         document.getElementById("btn-annuler-creation").addEventListener("click", annulerCreationFamille);
+        document.getElementById("btn-changer-mdp-action").addEventListener("click", ouvrirChangementMotDePasse);
+        document.getElementById("btn-fermer-mdp-action").addEventListener("click", fermerChangementMotDePasse);
+        document.getElementById("btn-sauver-mdp-action").addEventListener("click", changerMotDePasse);
         document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
         document.getElementById("btn-ajouter-action").addEventListener("click", ajouterNouveauRepas);
         document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
         document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
         document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
         let m = localStorage.getItem("code_famille_sauve");
-        let session = localStorage.getItem("session_famille_auth");
-        if (m && session === "1") { codeFamilleActif = m; chargerMenuDepuisCloud(); }
+        if (m) document.getElementById("input-code-famille").value = m;
     });
 
     function preparerCreationFamille() {
         modeCreationFamille = true;
-        document.getElementById("login-instruction").innerText = "Créez une nouvelle famille. Le nom doit être unique.";
+        document.getElementById("login-instruction").innerText =
+            "Créez une nouvelle famille. Le nom doit être unique.";
         document.getElementById("input-password-confirm").style.display = "block";
         document.getElementById("btn-login-action").innerText = "Créer la famille";
         document.getElementById("btn-creer-famille").style.display = "none";
@@ -153,7 +170,8 @@
 
     function annulerCreationFamille() {
         modeCreationFamille = false;
-        document.getElementById("login-instruction").innerText = "Connectez-vous à votre famille pour synchroniser vos appareils.";
+        document.getElementById("login-instruction").innerText =
+            "Connectez-vous à votre famille pour synchroniser vos appareils.";
         document.getElementById("input-password-confirm").style.display = "none";
         document.getElementById("input-password-confirm").value = "";
         document.getElementById("input-password-famille").value = "";
@@ -162,84 +180,144 @@
         document.getElementById("btn-annuler-creation").style.display = "none";
     }
 
-    async function authentifierFamille() {
-        let s = document.getElementById("input-code-famille").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
-        let password = document.getElementById("input-password-famille").value;
-        if (s.length < 3) { alert("Le nom de famille doit contenir au moins 3 caractères."); return; }
-        if (password.length < 4) { alert("Le mot de passe doit contenir au moins 4 caractères."); return; }
-        if (modeCreationFamille && password !== document.getElementById("input-password-confirm").value) { alert("Les mots de passe ne correspondent pas."); return; }
-        const btn = document.getElementById("btn-login-action"); btn.disabled = true;
-        try {
-            let res = await fetch(`${JSONBIN_URL}/latest`, { headers: { "X-Master-Key": MASTER_KEY }, cache: "no-store" });
-            if (!res.ok) throw new Error(`JSONBin lecture HTTP ${res.status}`);
-            let paquet = await res.json();
-            let baseC = paquet.record || paquet || {};
-            let famille = baseC[s];
-            if (modeCreationFamille) {
-                if (famille) { alert("Cette famille existe déjà. Veuillez choisir un autre nom."); return; }
-                let hash = await hacherMotDePasse(password);
-                baseC[s] = { passwordHash: hash, semaines: [], extras: [] };
-                initialiserDonneesPour(baseC[s]);
-                let save = await fetch(JSONBIN_URL, { method:"PUT", headers:{"Content-Type":"application/json","X-Master-Key":MASTER_KEY}, body:JSON.stringify(baseC) });
-                if (!save.ok) throw new Error(`JSONBin création HTTP ${save.status}`);
-                codeFamilleActif=s; donneesFamille.semaines=baseC[s].semaines; donneesFamille.extras=baseC[s].extras;
-                localStorage.setItem("code_famille_sauve",s); localStorage.setItem("session_famille_auth","1");
-                afficherInterface(); document.getElementById("ecran-login").style.display="none"; document.getElementById("ecran-principal").style.display="block"; document.getElementById("affichage-code-actif").innerText=s.toUpperCase(); return;
-            }
-            if (!famille) { alert("Cette famille n'existe pas."); return; }
-            if (!famille.passwordHash) { alert("Cette famille a été créée avec l'ancienne version et n'a pas encore de mot de passe."); return; }
-            if (await hacherMotDePasse(password) !== famille.passwordHash) { alert("Mot de passe incorrect."); return; }
-            codeFamilleActif=s; donneesFamille.semaines=famille.semaines || []; donneesFamille.extras=famille.extras || [];
-            localStorage.setItem("code_famille_sauve",s); localStorage.setItem("session_famille_auth","1");
-            await chargerMenuDepuisCloud();
-        } catch(e) { console.error(e); alert("Impossible de communiquer avec le cloud."); }
-        finally { btn.disabled=false; }
-    }
-
-    function initialiserDonneesPour(famille) {
-        famille.semaines=[[],[],[],[],[],[]];
-        for(let s=0;s<6;s++) for(let r=0;r<4;r++) famille.semaines[s].push({nom:R_BASE[s*4+r],ing:""});
-        famille.extras=E_BASE.map(n=>({nom:n,ing:""}));
-    }
-
     async function hacherMotDePasse(password) {
-        const data=new TextEncoder().encode(password);
-        const hash=await crypto.subtle.digest("SHA-256",data);
-        return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("");
+        const data = new TextEncoder().encode(password);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+        return Array.from(new Uint8Array(hashBuffer))
+            .map(b => b.toString(16).padStart(2, "0"))
+            .join("");
+    }
+
+    async function lireBaseCloud() {
+        const res = await fetch(`${JSONBIN_URL}/latest`, {
+            headers: { "X-Master-Key": MASTER_KEY },
+            cache: "no-store"
+        });
+        if (!res.ok) throw new Error(`JSONBin lecture HTTP ${res.status}`);
+        const paquet = await res.json();
+        return paquet.record || paquet || {};
+    }
+
+    async function sauvegarderBaseCloud(baseC) {
+        const res = await fetch(JSONBIN_URL, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Master-Key": MASTER_KEY
+            },
+            body: JSON.stringify(baseC)
+        });
+        if (!res.ok) {
+            const detail = await res.text();
+            throw new Error(`JSONBin sauvegarde HTTP ${res.status}: ${detail}`);
+        }
+    }
+
+    async function authentifierFamille() {
+        const s = document.getElementById("input-code-famille").value.trim()
+            .toLowerCase().replace(/[^a-z0-9_-]/g, "");
+        const password = document.getElementById("input-password-famille").value;
+
+        if (s.length < 3) {
+            alert("Le nom de famille doit contenir au moins 3 caractères.");
+            return;
+        }
+        if (password.length < 8) {
+            alert("Le mot de passe doit contenir au moins 8 caractères.");
+            return;
+        }
+
+        const btn = document.getElementById("btn-login-action");
+        btn.disabled = true;
+
+        try {
+            const baseC = await lireBaseCloud();
+            const famille = baseC[s];
+
+            if (modeCreationFamille) {
+                const confirmation = document.getElementById("input-password-confirm").value;
+
+                if (password !== confirmation) {
+                    alert("Les deux mots de passe ne correspondent pas.");
+                    return;
+                }
+
+                if (famille) {
+                    alert("Cette famille existe déjà. Veuillez choisir un autre nom.");
+                    return;
+                }
+
+                codeFamilleActif = s;
+                initialiserDonnees();
+
+                baseC[s] = {
+                    passwordHash: await hacherMotDePasse(password),
+                    semaines: donneesFamille.semaines,
+                    extras: donneesFamille.extras
+                };
+
+                await sauvegarderBaseCloud(baseC);
+                localStorage.setItem("code_famille_sauve", s);
+                localStorage.setItem("session_famille_auth", "1");
+                modeCreationFamille = false;
+                await chargerMenuDepuisCloud();
+                return;
+            }
+
+            if (!famille) {
+                alert("Cette famille n'existe pas. Cliquez sur « Créer une nouvelle famille » pour la créer.");
+                return;
+            }
+
+            if (!famille.passwordHash) {
+                alert("Cette famille a été créée avec l'ancienne version et n'a pas encore de mot de passe.");
+                return;
+            }
+
+            const hash = await hacherMotDePasse(password);
+            if (hash !== famille.passwordHash) {
+                alert("Mot de passe incorrect.");
+                return;
+            }
+
+            codeFamilleActif = s;
+            localStorage.setItem("code_famille_sauve", s);
+            localStorage.setItem("session_famille_auth", "1");
+            await chargerMenuDepuisCloud();
+
+        } catch (err) {
+            console.error("Erreur de connexion JSONBin:", err);
+            alert("Impossible de communiquer avec le cloud. Vérifiez votre connexion.");
+        } finally {
+            btn.disabled = false;
+        }
     }
 
     async function chargerMenuDepuisCloud() {
-        document.getElementById("ecran-login").style.display = "none"; 
-        document.getElementById("ecran-principal").style.display = "block";
-        document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
         document.getElementById("loading").style.display = "block";
         try {
-            // Lecture forcée en direct sans cache
-            let res = await fetch(`${JSONBIN_URL}/latest`, {
-                headers: { "X-Master-Key": MASTER_KEY },
-                cache: "no-store"
-            });
-            if (!res.ok) throw new Error(`JSONBin lecture HTTP ${res.status}`);
-            let paquet = await res.json();
-            
-            // Correction de lecture pour s'adapter au versionning manuel de votre compte
-            let racine = paquet.record || paquet;
-            
-            if (racine && racine[codeFamilleActif]) {
-                let b = racine[codeFamilleActif]; 
-                donneesFamille.semaines = b.semaines; 
-                donneesFamille.extras = b.extras;
-            } else { 
-                initialiserDonnees(); 
-                await pousserVersCloud(); 
-            }
+            const baseC = await lireBaseCloud();
+            const famille = baseC[codeFamilleActif];
+
+            if (!famille) throw new Error("Famille introuvable.");
+
+            donneesFamille.semaines = famille.semaines || [];
+            donneesFamille.extras = famille.extras || [];
+
+            document.getElementById("ecran-login").style.display = "none";
+            document.getElementById("ecran-principal").style.display = "block";
+            document.getElementById("affichage-code-actif").innerText = codeFamilleActif.toUpperCase();
+
+            afficherInterface();
         } catch(err) {
             console.error("Erreur de lecture JSONBin:", err);
-            initialiserDonnees();
-            alert("Impossible de lire les données du cloud. Le menu local par défaut est affiché.");
+            localStorage.removeItem("session_famille_auth");
+            document.getElementById("ecran-login").style.display = "block";
+            document.getElementById("ecran-principal").style.display = "none";
+            alert("Impossible de charger les données de cette famille.");
+        } finally {
+            document.getElementById("loading").style.display = "none";
         }
-        document.getElementById("loading").style.display = "none"; 
-        afficherInterface();
     }
 
     function initialiserDonnees() {
@@ -254,34 +332,21 @@
 
     async function pousserVersCloud() {
         try {
-            // Relecture de la base globale pour ne pas effacer les autres familles
-            let verif = await fetch(`${JSONBIN_URL}/latest`, {
-                headers: { "X-Master-Key": MASTER_KEY },
-                cache: "no-store"
-            });
-            if (!verif.ok) throw new Error(`JSONBin lecture avant sauvegarde HTTP ${verif.status}`);
-            let jsonG = await verif.json(); 
-            let baseC = jsonG.record || jsonG || {};
-            
-            baseC[codeFamilleActif] = { passwordHash: (baseC[codeFamilleActif] || {}).passwordHash, semaines: donneesFamille.semaines, extras: donneesFamille.extras };
-            
-            // Envoi de la nouvelle version avec écrasement PUT propre
-            let sauvegarde = await fetch(JSONBIN_URL, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-Master-Key": MASTER_KEY
-                },
-                body: JSON.stringify(baseC)
-            });
+            const baseC = await lireBaseCloud();
+            const ancienneFamille = baseC[codeFamilleActif];
 
-            if (!sauvegarde.ok) {
-                const detail = await sauvegarde.text();
-                throw new Error(`JSONBin sauvegarde HTTP ${sauvegarde.status}: ${detail}`);
-            }
+            if (!ancienneFamille) throw new Error("Famille introuvable.");
+
+            baseC[codeFamilleActif] = {
+                passwordHash: ancienneFamille.passwordHash,
+                semaines: donneesFamille.semaines,
+                extras: donneesFamille.extras
+            };
+
+            await sauvegarderBaseCloud(baseC);
         } catch(e) {
             console.error("Erreur de synchronisation JSONBin:", e);
-            alert("La sauvegarde dans le cloud a échoué. Vérifiez la console du navigateur.");
+            alert("La sauvegarde dans le cloud a échoué.");
             throw e;
         }
     }
@@ -340,7 +405,72 @@
         document.getElementById("box-epicerie").style.display = "block";
     }
 
-    function deconnexion() { try { localStorage.removeItem("code_famille_sauve"); localStorage.removeItem("session_famille_auth"); } catch(e) {} codeFamilleActif = ""; location.reload(); }
+    function ouvrirChangementMotDePasse() {
+        document.getElementById("ancien-password").value = "";
+        document.getElementById("nouveau-password").value = "";
+        document.getElementById("nouveau-password-confirm").value = "";
+        document.getElementById("box-motdepasse").style.display = "block";
+    }
+
+    function fermerChangementMotDePasse() {
+        document.getElementById("box-motdepasse").style.display = "none";
+    }
+
+    async function changerMotDePasse() {
+        const ancien = document.getElementById("ancien-password").value;
+        const nouveau = document.getElementById("nouveau-password").value;
+        const confirmation = document.getElementById("nouveau-password-confirm").value;
+
+        if (ancien.length < 8) {
+            alert("Le mot de passe actuel doit contenir au moins 8 caractères.");
+            return;
+        }
+        if (nouveau.length < 8) {
+            alert("Le nouveau mot de passe doit contenir au moins 8 caractères.");
+            return;
+        }
+        if (nouveau !== confirmation) {
+            alert("Les deux nouveaux mots de passe ne correspondent pas.");
+            return;
+        }
+        if (ancien === nouveau) {
+            alert("Le nouveau mot de passe doit être différent de l'ancien.");
+            return;
+        }
+
+        try {
+            const baseC = await lireBaseCloud();
+            const famille = baseC[codeFamilleActif];
+
+            if (!famille || !famille.passwordHash) {
+                throw new Error("Famille ou mot de passe introuvable.");
+            }
+
+            const ancienHash = await hacherMotDePasse(ancien);
+            if (ancienHash !== famille.passwordHash) {
+                alert("Le mot de passe actuel est incorrect.");
+                return;
+            }
+
+            famille.passwordHash = await hacherMotDePasse(nouveau);
+            await sauvegarderBaseCloud(baseC);
+
+            fermerChangementMotDePasse();
+            alert("Votre mot de passe a été modifié avec succès.");
+        } catch(e) {
+            console.error("Erreur de changement de mot de passe:", e);
+            alert("Impossible de modifier le mot de passe. Vérifiez votre connexion.");
+        }
+    }
+
+    function deconnexion() {
+        try {
+            localStorage.removeItem("code_famille_sauve");
+            localStorage.removeItem("session_famille_auth");
+        } catch(e) {}
+        codeFamilleActif = "";
+        location.reload();
+    }
     function fermerFenetre() { document.getElementById("box-ingredients").style.display = "none"; }
     function fermerEpicerie() { document.getElementById("box-epicerie").style.display = "none"; }
 
