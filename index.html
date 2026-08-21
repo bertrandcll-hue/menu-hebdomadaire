@@ -145,22 +145,38 @@
     const R_BASE = ["Pâté chinois", "Poulet entier", "Belogne rôti", "Poke Bowl", "Sloppy Joe", "Général Tao", "Patate au jambon", "Filet de poisson", "Steak haché", "Burger poulet", "Filet de porc", "Guedille thon", "Boulette M&M", "Fajitas", "Saucisses sirop", "Casserole thon", "Spaghetti", "Poulet rouge", "Épaule porc", "Macaroni viande", "Boeuf coréen", "Poulet Parm", "Carbonara", "Mac & Cheese"];
     const E_BASE = ["Lasagne", "Tortellini rosée", "Club sandwich", "Vol-au-vent", "Burritos Bowl", "Quesedillas"];
 
-    document.addEventListener("DOMContentLoaded", () => {
-        document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
-        document.getElementById("btn-creer-famille").addEventListener("click", preparerCreationFamille);
-        document.getElementById("btn-annuler-creation").addEventListener("click", annulerCreationFamille);
-        document.getElementById("btn-changer-mdp-action").addEventListener("click", ouvrirChangementMotDePasse);
-        document.getElementById("btn-fermer-mdp-action").addEventListener("click", fermerChangementMotDePasse);
-        document.getElementById("btn-sauver-mdp-action").addEventListener("click", changerMotDePasse);
-        document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
-        document.getElementById("btn-ajouter-action").addEventListener("click", ajouterNouveauRepas);
-        document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
-        document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
-        document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
-        let m = localStorage.getItem("code_famille_sauve");
-        if (m) document.getElementById("input-code-famille").value = m;
+   document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("btn-login-action").addEventListener("click", authentifierFamille);
+    document.getElementById("btn-creer-famille").addEventListener("click", preparerCreationFamille);
+    document.getElementById("btn-annuler-creation").addEventListener("click", annulerCreationFamille);
+    document.getElementById("btn-changer-mdp-action").addEventListener("click", ouvrirChangementMotDePasse);
+    document.getElementById("btn-fermer-mdp-action").addEventListener("click", fermerChangementMotDePasse);
+    document.getElementById("btn-sauver-mdp-action").addEventListener("click", changerMotDePasse);
+    document.getElementById("btn-logout-action").addEventListener("click", deconnexion);
+    document.getElementById("btn-ajouter-action").addEventListener("click", ajouterNouveauRepas);
+    document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
+    document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
+    document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
+
+    // Appuyer sur ENTER dans le courriel ou le mot de passe
+    // déclenche le bouton « Se connecter »
+    document.getElementById("input-code-famille").addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            document.getElementById("btn-login-action").click();
+        }
     });
 
+    document.getElementById("input-password-famille").addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            document.getElementById("btn-login-action").click();
+        }
+    });
+
+    let m = localStorage.getItem("code_famille_sauve");
+    if (m) document.getElementById("input-code-famille").value = m;
+});
     function preparerCreationFamille() {
         modeCreationFamille = true;
         document.getElementById("login-instruction").innerText =
@@ -215,16 +231,18 @@
             throw new Error(`JSONBin sauvegarde HTTP ${res.status}: ${detail}`);
         }
     }
+async function authentifierFamille() {
+    const s = document.getElementById("input-code-famille").value.trim().toLowerCase();
+    const password = document.getElementById("input-password-famille").value;
 
-    async function authentifierFamille() {
-        const s = document.getElementById("input-code-famille").value.trim()
-            .toLowerCase().replace(/[^a-z0-9_-]/g, "");
-        const password = document.getElementById("input-password-famille").value;
+    // Vérification du format du courriel
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-        if (s.length < 3) {
-            alert("Le nom de famille doit contenir au moins 3 caractères.");
-            return;
-        }
+    if (!emailRegex.test(s)) {
+        alert("Veuillez entrer une adresse courriel valide.");
+        return;
+    }
+    
         if (password.length < 8) {
             alert("Le mot de passe doit contenir au moins 8 caractères.");
             return;
