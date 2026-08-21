@@ -191,6 +191,9 @@
         document.getElementById("btn-fermer-ing-action").addEventListener("click", fermerFenetre);
         document.getElementById("btn-sauver-ing-action").addEventListener("click", sauverIngredients);
         document.getElementById("btn-fermer-epi-action").addEventListener("click", fermerEpicerie);
+        document.getElementById("btn-semaines-action").addEventListener("click", ouvrirNombreSemaines);
+        document.getElementById("btn-fermer-semaines-action").addEventListener("click", fermerNombreSemaines);
+        document.getElementById("btn-sauver-semaines-action").addEventListener("click", sauverNombreSemaines);
         let m = localStorage.getItem("code_famille_sauve");
         if (m) document.getElementById("input-code-famille").value = m;
     });
@@ -453,6 +456,86 @@
         document.getElementById("box-motdepasse").style.display = "none";
     }
 
+    function ouvrirNombreSemaines() {
+
+    const nbActuel = donneesFamille.semaines.length;
+
+    document.getElementById("input-nb-semaines").value =
+        String(Math.max(2, Math.min(6, nbActuel)));
+
+    document.getElementById("box-semaines").style.display = "block";
+}
+
+
+function fermerNombreSemaines() {
+
+    document.getElementById("box-semaines").style.display = "none";
+}
+
+
+async function sauverNombreSemaines() {
+
+    const nouveauNombre =
+        parseInt(
+            document.getElementById("input-nb-semaines").value,
+            10
+        );
+
+    if (nouveauNombre < 2 || nouveauNombre > 6) {
+
+        alert("Le nombre de semaines doit être entre 2 et 6.");
+
+        return;
+    }
+
+
+    const ancienNombre = donneesFamille.semaines.length;
+
+
+    // Si on augmente le nombre de semaines
+    if (nouveauNombre > ancienNombre) {
+
+        while (donneesFamille.semaines.length < nouveauNombre) {
+
+            const index = donneesFamille.semaines.length;
+
+            donneesFamille.semaines.push({
+
+                nom: R_BASE[index * 4] || "Repas libre",
+
+                ing: ""
+
+            });
+        }
+    }
+
+
+    // On ne supprime PAS les semaines si on diminue.
+    // Elles restent dans JSONBin.
+
+
+    try {
+
+        await pousserVersCloud();
+
+        localStorage.setItem(
+            "nb_semaines_actif",
+            String(nouveauNombre)
+        );
+
+        fermerNombreSemaines();
+
+        afficherInterface();
+
+    } catch (e) {
+
+        console.error(e);
+
+        alert(
+            "Impossible d'enregistrer le nombre de semaines."
+        );
+    }
+}
     async function changerMotDePasse() {
         const ancien = document.getElementById("ancien-password").value;
         const nouveau = document.getElementById("nouveau-password").value;
@@ -513,7 +596,14 @@
 
     function afficherInterface() {
         let gridHtml = "";
-        donneesFamille.semaines.forEach((sem, sIdx) => {
+        const nbAfficher = parseInt(
+    localStorage.getItem("nb_semaines_actif") || "4",
+    10
+);
+
+donneesFamille.semaines
+    .slice(0, nbAfficher)
+    .forEach((sem, sIdx) => {
             gridHtml += '<div class="card"><div><h3>Semaine ' + (sIdx + 1) + '</h3>';
             sem.forEach((repas, rIdx) => {
                 let nomAff = (repas && repas.nom) ? repas.nom : "Repas libre";
