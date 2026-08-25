@@ -377,8 +377,12 @@
             font-size: 13px;
             font-weight: bold;
             color: #7f8c8d;
-            margin: 10px 5px 6px 5px;
+            margin: 14px 5px 6px 5px;
             text-transform: uppercase;
+        }
+
+        .remplacement-section-titre:first-child {
+            margin-top: 5px;
         }
 
         .remplacement-item {
@@ -407,6 +411,13 @@
             border-color: #3498db;
         }
 
+        .btn-choisir-repas.repas-actuel {
+            background: #eaf2f8;
+            color: #7f8c8d;
+            cursor: default;
+            border-color: #d5dbdb;
+        }
+
         .btn-supprimer-extra {
             flex: 0 0 auto;
             width: 42px;
@@ -429,6 +440,17 @@
             color: #7f8c8d;
             padding: 25px 10px;
             font-size: 15px;
+        }
+
+        .remplacement-info {
+            background: #ebf5fb;
+            border: 1px solid #aed6f1;
+            color: #2874a6;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 10px;
+            line-height: 1.4;
         }
 
         .btn-fermer-remplacement {
@@ -1596,27 +1618,35 @@ async function ajouterNouveauRepas() {
         .style.display = "block";
 
 
-    donneesFamille.extras.push({
+    try {
 
-        nom: nom,
+        donneesFamille.extras.push({
 
-        ing: ""
+            nom: nom,
 
-    });
+            ing: ""
 
-
-    nomInput.value = "";
-
-
-    afficherInterface();
+        });
 
 
-    await pousserVersCloud();
+        nomInput.value = "";
 
 
-    document
-        .getElementById("loading")
-        .style.display = "none";
+        afficherInterface();
+
+
+        await pousserVersCloud();
+
+    } catch(e) {
+
+        console.error(e);
+
+    } finally {
+
+        document
+            .getElementById("loading")
+            .style.display = "none";
+    }
 }
 
 
@@ -1680,6 +1710,21 @@ function fermerFenetreRemplacement() {
 
 
 // =========================================================
+// ÉCHAPPER HTML
+// =========================================================
+
+function echapperHtml(texte) {
+
+    return String(texte)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+// =========================================================
 // AFFICHER LISTE DE REMPLACEMENT
 // =========================================================
 
@@ -1695,31 +1740,162 @@ function afficherListeRemplacement() {
             .toLowerCase();
 
 
+    const semaineActuelle =
+        donneesFamille
+            .semaines[sIdxRemplacement];
+
+
+    const repasActuel =
+        semaineActuelle
+            ? semaineActuelle[rIdxRemplacement]
+            : null;
+
+
     let html = "";
 
 
     // =====================================================
-    // BANQUE PRINCIPALE
+    // INFORMATION
     // =====================================================
+
+    html += `
+        <div class="remplacement-info">
+            💡 Si le repas choisi est déjà dans une autre semaine,
+            les deux repas seront automatiquement échangés.
+        </div>
+    `;
+
+
+    // =====================================================
+    // REPAS DES SEMAINES
+    // =====================================================
+
+    donneesFamille
+        .semaines
+        .forEach((sem, sIdx) => {
+
+            const repasFiltres =
+                sem
+                    .map((repas, rIdx) => ({
+                        repas,
+                        sIdx,
+                        rIdx
+                    }))
+                    .filter(item =>
+                        item.repas &&
+                        item.repas.nom &&
+                        item.repas.nom
+                            .toLowerCase()
+                            .includes(recherche)
+                    );
+
+
+            if (repasFiltres.length === 0) {
+                return;
+            }
+
+
+            html += `
+                <div class="remplacement-section-titre">
+                    📅 Semaine ${sIdx + 1}
+                </div>
+            `;
+
+
+            repasFiltres.forEach(item => {
+
+                const estActuel =
+                    item.sIdx === sIdxRemplacement &&
+                    item.rIdx === rIdxRemplacement;
+
+
+                html += `
+                    <div class="remplacement-item">
+
+                        <button
+                            class="btn-choisir-repas ${estActuel ? "repas-actuel" : ""}"
+                            data-type="semaine"
+                            data-sidx="${item.sIdx}"
+                            data-ridx="${item.rIdx}"
+                            ${estActuel ? "disabled" : ""}>
+
+                            ${estActuel ? "📍 " : "🔄 "}
+                            ${echapperHtml(item.repas.nom)}
+
+                            ${
+                                estActuel
+                                ? " (repas actuel)"
+                                : ""
+                            }
+
+                        </button>
+
+                    </div>
+                `;
+            });
+
+        });
+
+
+    // =====================================================
+    // BANQUE DE REPAS
+    //
+    // On affiche les repas de la banque qui ne sont PAS
+    // déjà présents dans les semaines.
+    //
+    // Ceux qui sont déjà dans une semaine sont accessibles
+    // directement dans la section de cette semaine.
+    // =====================================================
+
+    const nomsDansSemaines =
+        new Set();
+
+
+    donneesFamille
+        .semaines
+        .forEach(sem => {
+
+            sem.forEach(repas => {
+
+                if (
+                    repas &&
+                    repas.nom
+                ) {
+
+                    nomsDansSemaines.add(
+                        repas.nom.toLowerCase()
+                    );
+
+                }
+
+            });
+
+        });
+
 
     const tousLesRepasBase =
         [...R_BASE, ...E_BASE];
 
 
     const repasBaseFiltres =
-        tousLesRepasBase.filter(
-            nom =>
+        tousLesRepasBase
+            .filter(nom =>
                 nom
                     .toLowerCase()
                     .includes(recherche)
-        );
+            )
+            .filter(nom =>
+                !nomsDansSemaines.has(
+                    nom.toLowerCase()
+                )
+            );
 
 
     if (repasBaseFiltres.length > 0) {
 
         html += `
             <div class="remplacement-section-titre">
-                📚 Tous les repas
+                📚 Repas disponibles
             </div>
         `;
 
@@ -1734,18 +1910,20 @@ function afficherListeRemplacement() {
                         data-type="base"
                         data-nom="${encodeURIComponent(nom)}">
 
-                        ${nom}
+                        ➕ ${echapperHtml(nom)}
 
                     </button>
 
                 </div>
             `;
+
         });
+
     }
 
 
     // =====================================================
-    // EXTRAS PERSONNALISÉS
+    // EXTRAS
     // =====================================================
 
     const extrasFiltres =
@@ -1784,7 +1962,7 @@ function afficherListeRemplacement() {
                         data-type="extra"
                         data-index="${item.index}">
 
-                        ${item.repas.nom}
+                        ⭐ ${echapperHtml(item.repas.nom)}
 
                     </button>
 
@@ -1800,7 +1978,9 @@ function afficherListeRemplacement() {
 
                 </div>
             `;
+
         });
+
     }
 
 
@@ -1808,7 +1988,15 @@ function afficherListeRemplacement() {
     // AUCUN RÉSULTAT
     // =====================================================
 
-    if (html === "") {
+    if (
+        html ===
+        `
+        <div class="remplacement-info">
+            💡 Si le repas choisi est déjà dans une autre semaine,
+            les deux repas seront automatiquement échangés.
+        </div>
+    `
+    ) {
 
         html = `
             <div class="remplacement-vide">
@@ -1822,7 +2010,8 @@ function afficherListeRemplacement() {
         .getElementById(
             "liste-remplacement"
         )
-        .innerHTML = html;
+        .innerHTML =
+        html;
 
 
     // =====================================================
@@ -1843,7 +2032,31 @@ function afficherListeRemplacement() {
                         btn.dataset.type;
 
 
-                    if (type === "base") {
+                    if (type === "semaine") {
+
+                        const autreSIdx =
+                            parseInt(
+                                btn.dataset.sidx,
+                                10
+                            );
+
+
+                        const autreRIdx =
+                            parseInt(
+                                btn.dataset.ridx,
+                                10
+                            );
+
+
+                        await remplacerParRepasSemaine(
+                            autreSIdx,
+                            autreRIdx
+                        );
+
+                    }
+
+
+                    else if (type === "base") {
 
                         const nom =
                             decodeURIComponent(
@@ -1855,17 +2068,22 @@ function afficherListeRemplacement() {
                             nom
                         );
 
-                    } else {
+                    }
+
+
+                    else if (type === "extra") {
 
                         const index =
                             parseInt(
-                                btn.dataset.index
+                                btn.dataset.index,
+                                10
                             );
 
 
                         await remplacerParExtra(
                             index
                         );
+
                     }
 
                 }
@@ -1893,7 +2111,8 @@ function afficherListeRemplacement() {
 
                     const index =
                         parseInt(
-                            btn.dataset.deleteExtra
+                            btn.dataset.deleteExtra,
+                            10
                         );
 
 
@@ -1905,6 +2124,168 @@ function afficherListeRemplacement() {
             );
 
         });
+}
+
+
+// =========================================================
+// REMPLACER PAR UN REPAS D'UNE AUTRE SEMAINE
+// =========================================================
+
+async function remplacerParRepasSemaine(
+    autreSIdx,
+    autreRIdx
+) {
+
+    // Protection contre le clic sur le repas actuel
+
+    if (
+        autreSIdx === sIdxRemplacement &&
+        autreRIdx === rIdxRemplacement
+    ) {
+
+        fermerFenetreRemplacement();
+
+        return;
+    }
+
+
+    const repasActuel =
+        donneesFamille
+            .semaines[sIdxRemplacement]
+            [rIdxRemplacement];
+
+
+    const autreRepas =
+        donneesFamille
+            .semaines[autreSIdx]
+            [autreRIdx];
+
+
+    if (!repasActuel || !autreRepas) {
+
+        return;
+    }
+
+
+    document
+        .getElementById("loading")
+        .style.display = "block";
+
+
+    try {
+
+        // =================================================
+        // VRAI ÉCHANGE
+        // =================================================
+
+        donneesFamille
+            .semaines[sIdxRemplacement]
+            [rIdxRemplacement] =
+            autreRepas;
+
+
+        donneesFamille
+            .semaines[autreSIdx]
+            [autreRIdx] =
+            repasActuel;
+
+
+        fermerFenetreRemplacement();
+
+
+        afficherInterface();
+
+
+        await pousserVersCloud();
+
+
+    } catch (e) {
+
+        console.error(
+            "Erreur lors de l'échange des repas :",
+            e
+        );
+
+
+        alert(
+            "Impossible d'échanger les repas."
+        );
+
+
+    } finally {
+
+        document
+            .getElementById("loading")
+            .style.display = "none";
+    }
+}
+
+
+// =========================================================
+// TROUVER UN REPAS DANS LES SEMAINES
+// =========================================================
+
+function trouverRepasDansSemaines(
+    nomRepas,
+    ignorerSIdx = -1,
+    ignorerRIdx = -1
+) {
+
+    const nomRecherche =
+        nomRepas
+            .trim()
+            .toLowerCase();
+
+
+    for (
+        let sIdx = 0;
+        sIdx < donneesFamille.semaines.length;
+        sIdx++
+    ) {
+
+        const semaine =
+            donneesFamille.semaines[sIdx];
+
+
+        for (
+            let rIdx = 0;
+            rIdx < semaine.length;
+            rIdx++
+        ) {
+
+            if (
+                sIdx === ignorerSIdx &&
+                rIdx === ignorerRIdx
+            ) {
+                continue;
+            }
+
+
+            const repas =
+                semaine[rIdx];
+
+
+            if (
+                repas &&
+                repas.nom &&
+                repas.nom
+                    .trim()
+                    .toLowerCase() === nomRecherche
+            ) {
+
+                return {
+                    sIdx,
+                    rIdx
+                };
+
+            }
+
+        }
+
+    }
+
+
+    return null;
 }
 
 
@@ -1935,6 +2316,31 @@ async function remplacerParRepasBase(
     }
 
 
+    // =====================================================
+    // IMPORTANT :
+    // Si ce repas existe déjà dans une autre semaine,
+    // on fait un échange au lieu de créer un doublon.
+    // =====================================================
+
+    const positionExistante =
+        trouverRepasDansSemaines(
+            nomNouveauRepas,
+            sIdxRemplacement,
+            rIdxRemplacement
+        );
+
+
+    if (positionExistante) {
+
+        await remplacerParRepasSemaine(
+            positionExistante.sIdx,
+            positionExistante.rIdx
+        );
+
+        return;
+    }
+
+
     document
         .getElementById("loading")
         .style.display = "block";
@@ -1942,9 +2348,12 @@ async function remplacerParRepasBase(
 
     try {
 
-        // -------------------------------------------------
-        // L'ancien repas devient un Extra
-        // -------------------------------------------------
+        // =================================================
+        // Aucun autre exemplaire dans les semaines.
+        //
+        // On garde donc l'ancien comportement :
+        // l'ancien repas devient un Extra.
+        // =================================================
 
         if (
             repasActuel &&
@@ -1964,9 +2373,9 @@ async function remplacerParRepasBase(
         }
 
 
-        // -------------------------------------------------
+        // =================================================
         // Nouveau repas
-        // -------------------------------------------------
+        // =================================================
 
         donneesFamille
             .semaines[sIdxRemplacement]
@@ -2053,46 +2462,95 @@ async function remplacerParExtra(
 
     try {
 
-        // -------------------------------------------------
-        // Retirer le repas choisi des Extras
-        // -------------------------------------------------
+        // =================================================
+        // Vérifier si l'Extra existe déjà dans une semaine.
+        //
+        // Normalement ce ne devrait pas arriver, mais cette
+        // protection empêche aussi la création de doublons.
+        // =================================================
 
-        donneesFamille.extras.splice(
-            extraIdx,
-            1
-        );
+        const positionExistante =
+            trouverRepasDansSemaines(
+                nouveauRepas.nom,
+                sIdxRemplacement,
+                rIdxRemplacement
+            );
 
 
-        // -------------------------------------------------
-        // Ancien repas devient un Extra
-        // -------------------------------------------------
+        if (positionExistante) {
 
-        if (
-            repasActuel &&
-            repasActuel.nom
-        ) {
+            // On retire l'Extra de sa banque
 
-            donneesFamille.extras.push({
+            donneesFamille.extras.splice(
+                extraIdx,
+                1
+            );
 
-                nom:
-                    repasActuel.nom,
 
-                ing:
-                    repasActuel.ing || ""
+            // Échange avec le repas existant
 
-            });
+            const repasDansAutreSemaine =
+                donneesFamille
+                    .semaines[positionExistante.sIdx]
+                    [positionExistante.rIdx];
+
+
+            donneesFamille
+                .semaines[sIdxRemplacement]
+                [rIdxRemplacement] =
+                repasDansAutreSemaine;
+
+
+            donneesFamille
+                .semaines[positionExistante.sIdx]
+                [positionExistante.rIdx] =
+                repasActuel;
+
+
+        } else {
+
+            // =================================================
+            // Retirer le repas choisi des Extras
+            // =================================================
+
+            donneesFamille.extras.splice(
+                extraIdx,
+                1
+            );
+
+
+            // =================================================
+            // Ancien repas devient un Extra
+            // =================================================
+
+            if (
+                repasActuel &&
+                repasActuel.nom
+            ) {
+
+                donneesFamille.extras.push({
+
+                    nom:
+                        repasActuel.nom,
+
+                    ing:
+                        repasActuel.ing || ""
+
+                });
+
+            }
+
+
+            // =================================================
+            // Placer le nouveau repas dans la semaine
+            // =================================================
+
+            donneesFamille
+                .semaines[sIdxRemplacement]
+                [rIdxRemplacement] =
+                nouveauRepas;
 
         }
-
-
-        // -------------------------------------------------
-        // Placer le nouveau repas dans la semaine
-        // -------------------------------------------------
-
-        donneesFamille
-            .semaines[sIdxRemplacement]
-            [rIdxRemplacement] =
-            nouveauRepas;
 
 
         fermerFenetreRemplacement();
@@ -2221,6 +2679,9 @@ function abrirIngredients(
                 .extras[exIdx];
 
 
+    if (!plat) return;
+
+
     document
         .getElementById(
             "box-ingredients"
@@ -2268,37 +2729,45 @@ async function sauverIngredients() {
         "block";
 
 
-    if (
-        typePlatSelectionne ===
-        "semaine"
-    ) {
+    try {
 
-        donneesFamille
-            .semaines[sIdxSelectionne]
-            [rIdxSelectionne]
-            .ing = txt;
+        if (
+            typePlatSelectionne ===
+            "semaine"
+        ) {
 
-    } else {
+            donneesFamille
+                .semaines[sIdxSelectionne]
+                [rIdxSelectionne]
+                .ing = txt;
 
-        donneesFamille
-            .extras[extraIdxSelectionne]
-            .ing = txt;
+        } else {
+
+            donneesFamille
+                .extras[extraIdxSelectionne]
+                .ing = txt;
+        }
+
+
+        fermerFenetre();
+
+
+        afficherInterface();
+
+
+        await pousserVersCloud();
+
+    } catch(e) {
+
+        console.error(e);
+
+    } finally {
+
+        document
+            .getElementById("loading")
+            .style.display =
+            "none";
     }
-
-
-    fermerFenetre();
-
-
-    afficherInterface();
-
-
-    await pousserVersCloud();
-
-
-    document
-        .getElementById("loading")
-        .style.display =
-        "none";
 }
 
 
@@ -2661,7 +3130,7 @@ function afficherInterface() {
                                 <span
                                     class="repas-nom"
                                     id="nom-${sIdx}-${rIdx}">
-                                    ${nomAff}
+                                    ${echapperHtml(nomAff)}
                                 </span>
 
 
@@ -2717,50 +3186,71 @@ function afficherInterface() {
                 sem.forEach(
                     (repas, rIdx) => {
 
-                        document
-                            .getElementById(
+                        const nomElement =
+                            document.getElementById(
                                 `nom-${sIdx}-${rIdx}`
-                            )
-                            .addEventListener(
-                                "click",
-                                () =>
-                                    abrirIngredients(
-                                        "semaine",
-                                        sIdx,
-                                        rIdx,
-                                        0
-                                    )
                             );
 
 
-                        document
-                            .getElementById(
+                        const selectElement =
+                            document.getElementById(
                                 `sel-${sIdx}-${rIdx}`
-                            )
-                            .addEventListener(
-                                "click",
-                                () =>
-                                    ouvrirRemplacement(
-                                        sIdx,
-                                        rIdx
-                                    )
                             );
+
+
+                        if (nomElement) {
+
+                            nomElement
+                                .addEventListener(
+                                    "click",
+                                    () =>
+                                        abrirIngredients(
+                                            "semaine",
+                                            sIdx,
+                                            rIdx,
+                                            0
+                                        )
+                                );
+
+                        }
+
+
+                        if (selectElement) {
+
+                            selectElement
+                                .addEventListener(
+                                    "click",
+                                    () =>
+                                        ouvrirRemplacement(
+                                            sIdx,
+                                            rIdx
+                                        )
+                                );
+
+                        }
 
                     }
                 );
 
 
-                document
-                    .getElementById(
+                const boutonEpicerie =
+                    document.getElementById(
                         `btn-epi-${sIdx}`
-                    )
-                    .addEventListener(
-                        "click",
-                        () =>
-                            genererEpicerieSemaine(
-                                sIdx
-                            )
                     );
+
+
+                if (boutonEpicerie) {
+
+                    boutonEpicerie
+                        .addEventListener(
+                            "click",
+                            () =>
+                                genererEpicerieSemaine(
+                                    sIdx
+                                )
+                        );
+
+                }
 
             }
         );
@@ -2791,7 +3281,7 @@ function afficherInterface() {
 
                             <span
                                 class="extra-nom">
-                                ${ex.nom}
+                                ${echapperHtml(ex.nom)}
                             </span>
 
 
@@ -2835,35 +3325,43 @@ function afficherInterface() {
                     ex.nom
                 ) {
 
-                    document
-                        .getElementById(
+                    const extraElement =
+                        document.getElementById(
                             `ex-${exIdx}`
-                        )
-                        .addEventListener(
-                            "click",
-                            (e) => {
-
-                                if (
-                                    e.target
-                                        .classList
-                                        .contains(
-                                            "btn-supprimer-extra"
-                                        )
-                                ) {
-
-                                    return;
-                                }
-
-
-                                abrirIngredients(
-                                    "extra",
-                                    0,
-                                    0,
-                                    exIdx
-                                );
-
-                            }
                         );
+
+
+                    if (extraElement) {
+
+                        extraElement
+                            .addEventListener(
+                                "click",
+                                (e) => {
+
+                                    if (
+                                        e.target
+                                            .classList
+                                            .contains(
+                                                "btn-supprimer-extra"
+                                            )
+                                    ) {
+
+                                        return;
+                                    }
+
+
+                                    abrirIngredients(
+                                        "extra",
+                                        0,
+                                        0,
+                                        exIdx
+                                    );
+
+                                }
+                            );
+
+                    }
+
                 }
 
             }
@@ -2890,7 +3388,8 @@ function afficherInterface() {
 
                         const idx =
                             parseInt(
-                                btn.dataset.index
+                                btn.dataset.index,
+                                10
                             );
 
 
