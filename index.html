@@ -107,7 +107,7 @@ textarea{width:100%;height:200px;margin-top:12px;padding:10px;border:1px solid #
 <button class="btn-close" onclick="fermerRemplacement()">Fermer</button>
 <h2>🔄 Remplacer le repas</h2>
 <input id="recherche-repas" class="search-box" type="text" placeholder="Rechercher un repas...">
-<div class="info-box">💡 Si le repas choisi est déjà dans une autre semaine, les deux repas seront automatiquement échangés.</div>
+<div class="info-box">💡 Tous les repas sont ici : ceux des semaines et ceux des Extras. Choisir un repas d’une autre semaine échange les deux repas; choisir un Extra l’échange avec le repas actuel.</div>
 <div id="remplacement-liste"></div>
 </div>
 </div>
@@ -294,9 +294,45 @@ while(s.length<4)s.push({nom:"Repas libre",ing:""});
 return s.slice(0,4).map(r=>r||{nom:"Repas libre",ing:""});
 });
 donneesFamille.extras=(donneesFamille.extras||[]).filter(e=>e&&e.nom).map(e=>({nom:e.nom,ing:e.ing||""}));
+
+// Tous les repas doivent avoir un seul emplacement : une semaine OU les Extras.
+// On nettoie d'abord les doublons qui pourraient provenir d'une ancienne version.
+const presentsDansSemaines=new Set();
+donneesFamille.semaines.forEach(semaine=>{
+    (semaine||[]).forEach(repas=>{
+        if(repas?.nom) presentsDansSemaines.add(normaliserNom(repas.nom));
+    });
+});
+
+const extrasVus=new Set();
+donneesFamille.extras=donneesFamille.extras.filter(repas=>{
+    const key=normaliserNom(repas?.nom);
+    if(!key)return false;
+    // Si le repas est déjà dans une semaine, il ne doit pas aussi être dans Extras.
+    if(presentsDansSemaines.has(key))return false;
+    // Un même Extra ne doit apparaître qu'une seule fois.
+    if(extrasVus.has(key))return false;
+    extrasVus.add(key);
+    return true;
+});
+
+// Tous les repas de la banque de base doivent être soit dans une semaine,
+// soit dans les Extras. Cela corrige les anciens comptes créés avec moins
+// de 6 semaines : les repas manquants deviennent automatiquement des Extras.
+const presents=new Set(presentsDansSemaines);
+donneesFamille.extras.forEach(repas=>{
+    if(repas?.nom) presents.add(normaliserNom(repas.nom));
+});
+R_BASE.forEach(nom=>{
+    const key=normaliserNom(nom);
+    if(!presents.has(key)){
+        donneesFamille.extras.push({nom,ing:""});
+        presents.add(key);
+    }
+});
 }
 function creerSemaineVide(){
-return [{nom:R_BASE[0],ing:""},{nom:R_BASE[1],ing:""},{nom:R_BASE[2],ing:""},{nom:R_BASE[3],ing:""}];
+return [];
 }
 async function pousserVersCloud(){
 const base=await lireBaseCloud(),ancienne=base[codeFamilleActif];
@@ -317,34 +353,41 @@ if(nouveau<actuel){
         return;
     }
 
-    // Les repas des semaines retirées deviennent des Extras.
-    // On évite volontairement les doublons : un même repas ne peut
-    // exister qu'une seule fois dans les Extras.
     const semainesRetirees=donneesFamille.semaines.slice(nouveau);
-    const extrasExistants=new Set(
-        donneesFamille.extras.map(e=>normaliserNom(e?.nom))
-    );
+    const extrasExistants=new Set(donneesFamille.extras.map(e=>normaliserNom(e?.nom)));
 
     semainesRetirees.forEach(semaine=>{
         (semaine||[]).forEach(repas=>{
-            if(!repas || !repas.nom) return;
-
+            if(!repas?.nom)return;
             const key=normaliserNom(repas.nom);
-            if(!key || extrasExistants.has(key)) return;
-
-            donneesFamille.extras.push({
-                nom:repas.nom,
-                ing:repas.ing||""
-            });
+            if(!key||extrasExistants.has(key))return;
+            donneesFamille.extras.push({nom:repas.nom,ing:repas.ing||""});
             extrasExistants.add(key);
         });
     });
 
     donneesFamille.semaines=donneesFamille.semaines.slice(0,nouveau);
 }else{
-    for(let i=actuel;i<nouveau;i++)donneesFamille.semaines.push(creerSemaineVide());
+    // Lorsqu'on ajoute des semaines, on reprend d'abord les repas qui sont
+    // déjà dans les Extras afin qu'un repas ne soit jamais dupliqué.
+    const extrasDisponibles=donneesFamille.extras.slice();
+    for(let i=actuel;i<nouveau;i++){
+        const semaine=[];
+        for(let r=0;r<4;r++){
+            if(extrasDisponibles.length){
+                const repas=extrasDisponibles.shift();
+                const idx=donneesFamille.extras.indexOf(repas);
+                if(idx!==-1)donneesFamille.extras.splice(idx,1);
+                semaine.push(repas);
+            }else{
+                semaine.push({nom:"Repas libre",ing:""});
+            }
+        }
+        donneesFamille.semaines.push(semaine);
+    }
 }
 
+normaliserDonnees();
 document.getElementById("nombre-semaines").value=nouveau;
 await sauvegarderEtAfficher();
 }
@@ -405,38 +448,50 @@ IMPORTANT :
 - Un repas de la banque de base qui n'est nulle part peut être choisi ;
   il remplace alors le repas actuel et l'ancien devient un Extra.
 */
-function obtenirRepasDisponibles(){
-const actuel=donneesFamille.semaines[sIdxSelectionne]?.[rIdxSelectionne]?.nom||"";
-const extrasNoms=new Set(donneesFamille.extras.map(e=>normaliserNom(e.nom)));
-const candidats=[...R_BASE,...E_BASE];
-const uniques=[];
-const vus=new Set();
-candidats.forEach(nom=>{
-const key=normaliserNom(nom);
-if(vus.has(key)||key===normaliserNom(actuel)||extrasNoms.has(key))return;
-vus.add(key);uniques.push(nom);
-});
-return uniques;
+function obtenirTousLesRepasPourRemplacement(){
+    const actuel=normaliserNom(donneesFamille.semaines[sIdxSelectionne]?.[rIdxSelectionne]?.nom||"");
+    const result=[];
+    const vus=new Set();
+
+    // Les repas des semaines actives.
+    donneesFamille.semaines.forEach((semaine,s)=>{
+        (semaine||[]).forEach((repas,r)=>{
+            if(!repas?.nom)return;
+            const key=normaliserNom(repas.nom);
+            if(!key||key===actuel||vus.has(key))return;
+            vus.add(key);
+            result.push({nom:repas.nom,type:"semaine",s,r});
+        });
+    });
+
+    // Les repas des Extras.
+    donneesFamille.extras.forEach((repas,idx)=>{
+        if(!repas?.nom)return;
+        const key=normaliserNom(repas.nom);
+        if(!key||key===actuel||vus.has(key))return;
+        vus.add(key);
+        result.push({nom:repas.nom,type:"extra",extraIdx:idx});
+    });
+
+    return result;
 }
 function afficherChoixRemplacement(){
 const recherche=normaliserNom(document.getElementById("recherche-repas").value);
-let html="";
-let disponibles=obtenirRepasDisponibles().filter(n=>normaliserNom(n).includes(recherche));
-html+='<div class="section-title">📚 REPAS DISPONIBLES</div>';
-if(disponibles.length){
-disponibles.forEach(nom=>{
-html+=`<div class="choice" onclick="choisirRepasDisponible(${JSON.stringify(nom)})"><span class="icon">➕</span><span>${escapeHtml(nom)}</span></div>`;
-});
-}else html+='<div class="empty">Aucun repas disponible.</div>';
+const choix=obtenirTousLesRepasPourRemplacement().filter(x=>normaliserNom(x.nom).includes(recherche));
+let html='<div class="section-title">🍽️ TOUS LES REPAS</div>';
 
-let extras=donneesFamille.extras.filter(e=>normaliserNom(e.nom).includes(recherche));
-html+='<div class="section-title">⭐ EXTRAS</div>';
-if(extras.length){
-extras.forEach((ex,idx)=>{
-const vraiIdx=donneesFamille.extras.indexOf(ex);
-html+=`<div class="choice-extra"><div class="choice" onclick="choisirExtra(${vraiIdx})"><span class="icon">⭐</span><span>${escapeHtml(ex.nom)}</span></div><button class="btn-delete-modal" onclick="event.stopPropagation();supprimerExtraDepuisModal(${vraiIdx})">🗑️</button></div>`;
-});
-}else html+='<div class="empty">Aucun extra correspondant.</div>';
+if(choix.length){
+    choix.forEach(x=>{
+        if(x.type==="extra"){
+            html+=`<div class="choice-extra"><div class="choice" onclick="choisirExtra(${x.extraIdx})"><span class="icon">⭐</span><span>${escapeHtml(x.nom)}</span></div><button class="btn-delete-modal" onclick="event.stopPropagation();supprimerExtraDepuisModal(${x.extraIdx})">🗑️</button></div>`;
+        }else{
+            html+=`<div class="choice" onclick="choisirRepasDeSemaine(${x.s},${x.r})"><span class="icon">📅</span><span>${escapeHtml(x.nom)}</span></div>`;
+        }
+    });
+}else{
+    html+='<div class="empty">Aucun autre repas correspondant.</div>';
+}
+
 document.getElementById("remplacement-liste").innerHTML=html;
 }
 function escapeHtml(t){
@@ -456,66 +511,30 @@ document.getElementById("loading").style.display="block";
 try{
 const actuel=donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne];
 const choisi=donneesFamille.extras[extraIdx];
-// Échange réel : l'Extra entre dans la semaine et l'ancien repas devient l'Extra.
-// Il ne reste donc JAMAIS une deuxième copie du repas choisi.
 donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne]=choisi;
 donneesFamille.extras.splice(extraIdx,1);
-donneesFamille.extras.push(actuel);
+if(actuel?.nom)donneesFamille.extras.push(actuel);
 fermerRemplacement();
 await pousserVersCloud();
 afficherInterface();
 }catch(e){console.error(e);alert("La sauvegarde a échoué.");}
 finally{document.getElementById("loading").style.display="none";}
 }
-async function choisirRepasDisponible(nom){
-    if(!nom || !donneesFamille.semaines[sIdxSelectionne]?.[rIdxSelectionne]) return;
-
-    document.getElementById("loading").style.display="block";
-    try{
-        const actuel=donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne];
-        const nomNormalise=normaliserNom(nom);
-
-        // Sécurité : un repas qui est réellement dans les Extras ne doit
-        // jamais être traité comme un repas disponible.
-        const extraIdx=donneesFamille.extras.findIndex(e=>normaliserNom(e?.nom)===nomNormalise);
-        if(extraIdx!==-1){
-            await choisirExtra(extraIdx);
-            return;
-        }
-
-        const position=repasDansSemaine(nom);
-
-        if(position && !(position.s===sIdxSelectionne && position.r===rIdxSelectionne)){
-            // Le repas est déjà dans une autre semaine : on échange les deux repas.
-            const autre=donneesFamille.semaines[position.s][position.r];
-            donneesFamille.semaines[position.s][position.r]=actuel;
-            donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne]=autre;
-        }else{
-            // Le repas est disponible dans la banque, mais n'est dans aucune
-            // semaine active : il remplace directement le repas sélectionné.
-            donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne]={
-                nom:nom,
-                ing:""
-            };
-
-            // L'ancien repas devient un Extra, sans jamais créer de doublon.
-            const dejaDansExtras=donneesFamille.extras.some(
-                e=>normaliserNom(e?.nom)===normaliserNom(actuel?.nom)
-            );
-            if(!dejaDansExtras && actuel?.nom){
-                donneesFamille.extras.push({nom:actuel.nom,ing:actuel.ing||""});
-            }
-        }
-
-        fermerRemplacement();
-        await pousserVersCloud();
-        afficherInterface();
-    }catch(e){
-        console.error(e);
-        alert("La sauvegarde a échoué.");
-    }finally{
-        document.getElementById("loading").style.display="none";
-    }
+async function choisirRepasDeSemaine(s,r){
+if(s===sIdxSelectionne&&r===rIdxSelectionne)return;
+if(!donneesFamille.semaines[s]?.[r])return;
+document.getElementById("loading").style.display="block";
+try{
+const actuel=donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne];
+const choisi=donneesFamille.semaines[s][r];
+// Échange direct entre les deux emplacements. Aucun Extra n'est créé.
+donneesFamille.semaines[s][r]=actuel;
+donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne]=choisi;
+fermerRemplacement();
+await pousserVersCloud();
+afficherInterface();
+}catch(e){console.error(e);alert("La sauvegarde a échoué.");}
+finally{document.getElementById("loading").style.display="none";}
 }
 
 /* ---------------- AFFICHAGE ---------------- */
