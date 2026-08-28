@@ -241,7 +241,7 @@ const base=await lireBaseCloud(), famille=base[s];
 if(modeCreationFamille){
 if(password!==document.getElementById("input-password-confirm").value){alert("Les deux mots de passe ne correspondent pas.");return;}
 if(famille){alert("Cette famille existe déjà.");return;}
-codeFamilleActif=s;initialiserDonnees(4);
+codeFamilleActif=s;initialiserDonnees(6);
 base[s]={passwordHash:await hacherMotDePasse(password),semaines:donneesFamille.semaines,extras:donneesFamille.extras};
 await sauvegarderBaseCloud(base);
 localStorage.setItem("code_famille_sauve",s);localStorage.setItem("session_famille_auth","1");
@@ -266,14 +266,14 @@ normaliserDonnees();
 document.getElementById("ecran-login").style.display="none";
 document.getElementById("ecran-principal").style.display="block";
 document.getElementById("affichage-code-actif").innerText=codeFamilleActif;
-document.getElementById("nombre-semaines").value=donneesFamille.semaines.length||4;
+document.getElementById("nombre-semaines").value=donneesFamille.semaines.length||6;
 afficherInterface();
 }catch(e){console.error(e);localStorage.removeItem("session_famille_auth");document.getElementById("ecran-login").style.display="block";document.getElementById("ecran-principal").style.display="none";alert("Impossible de charger les données.");}
 finally{document.getElementById("loading").style.display="none";}
 }
 function initialiserDonnees(nb){
 donneesFamille.semaines=[];
-const total=Math.max(2,Math.min(6,nb||4));
+const total=Math.max(2,Math.min(6,nb||6));
 const pool=R_BASE.slice();
 for(let s=0;s<total;s++){
 const semaine=[];
@@ -286,7 +286,7 @@ donneesFamille.semaines.push(semaine);
 donneesFamille.extras=E_BASE.map(n=>({nom:n,ing:""}));
 }
 function normaliserDonnees(){
-if(!donneesFamille.semaines.length)initialiserDonnees(4);
+if(!donneesFamille.semaines.length)initialiserDonnees(6);
 donneesFamille.semaines=donneesFamille.semaines.slice(0,6);
 while(donneesFamille.semaines.length<2)donneesFamille.semaines.push(creerSemaineVide());
 donneesFamille.semaines=donneesFamille.semaines.map(s=>Array.isArray(s)?s:[]).map(s=>{
@@ -403,7 +403,7 @@ IMPORTANT :
 - Un repas déjà dans une autre semaine reste disponible : le clic provoque
   un échange entre les deux semaines.
 - Un repas de la banque de base qui n'est nulle part peut être choisi ;
-  l'ancien repas devient alors un Extra.
+  il remplace alors le repas actuel et l'ancien devient un Extra.
 */
 function obtenirRepasDisponibles(){
 const actuel=donneesFamille.semaines[sIdxSelectionne]?.[rIdxSelectionne]?.nom||"";
@@ -468,29 +468,54 @@ afficherInterface();
 finally{document.getElementById("loading").style.display="none";}
 }
 async function choisirRepasDisponible(nom){
-document.getElementById("loading").style.display="block";
-try{
-const actuel=donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne];
-const position=repasDansSemaine(nom);
-if(position && !(position.s===sIdxSelectionne&&position.r===rIdxSelectionne)){
-// Le repas est déjà dans une autre semaine : échange direct.
-const autre=donneesFamille.semaines[position.s][position.r];
-donneesFamille.semaines[position.s][position.r]=actuel;
-donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne]=autre;
-}else{
-// Repas de la banque qui n'est actuellement nulle part.
-// L'ancien repas devient un Extra.
-donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne]={nom,ing:""};
-// Sécurité supplémentaire : si jamais le nom existe dans les Extras,
-// on le retire avant d'ajouter l'ancien repas.
-donneesFamille.extras=donneesFamille.extras.filter(e=>normaliserNom(e.nom)!==normaliserNom(nom));
-donneesFamille.extras.push(actuel);
-}
-fermerRemplacement();
-await pousserVersCloud();
-afficherInterface();
-}catch(e){console.error(e);alert("La sauvegarde a échoué.");}
-finally{document.getElementById("loading").style.display="none";}
+    if(!nom || !donneesFamille.semaines[sIdxSelectionne]?.[rIdxSelectionne]) return;
+
+    document.getElementById("loading").style.display="block";
+    try{
+        const actuel=donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne];
+        const nomNormalise=normaliserNom(nom);
+
+        // Sécurité : un repas qui est réellement dans les Extras ne doit
+        // jamais être traité comme un repas disponible.
+        const extraIdx=donneesFamille.extras.findIndex(e=>normaliserNom(e?.nom)===nomNormalise);
+        if(extraIdx!==-1){
+            await choisirExtra(extraIdx);
+            return;
+        }
+
+        const position=repasDansSemaine(nom);
+
+        if(position && !(position.s===sIdxSelectionne && position.r===rIdxSelectionne)){
+            // Le repas est déjà dans une autre semaine : on échange les deux repas.
+            const autre=donneesFamille.semaines[position.s][position.r];
+            donneesFamille.semaines[position.s][position.r]=actuel;
+            donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne]=autre;
+        }else{
+            // Le repas est disponible dans la banque, mais n'est dans aucune
+            // semaine active : il remplace directement le repas sélectionné.
+            donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne]={
+                nom:nom,
+                ing:""
+            };
+
+            // L'ancien repas devient un Extra, sans jamais créer de doublon.
+            const dejaDansExtras=donneesFamille.extras.some(
+                e=>normaliserNom(e?.nom)===normaliserNom(actuel?.nom)
+            );
+            if(!dejaDansExtras && actuel?.nom){
+                donneesFamille.extras.push({nom:actuel.nom,ing:actuel.ing||""});
+            }
+        }
+
+        fermerRemplacement();
+        await pousserVersCloud();
+        afficherInterface();
+    }catch(e){
+        console.error(e);
+        alert("La sauvegarde a échoué.");
+    }finally{
+        document.getElementById("loading").style.display="none";
+    }
 }
 
 /* ---------------- AFFICHAGE ---------------- */
