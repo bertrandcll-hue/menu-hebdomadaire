@@ -310,12 +310,42 @@ async function modifierNombreSemaines(){
 const nouveau=parseInt(document.getElementById("nombre-semaines").value);
 const actuel=donneesFamille.semaines.length;
 if(nouveau===actuel)return;
+
 if(nouveau<actuel){
-if(!confirm(`Les semaines ${nouveau+1} à ${actuel} seront supprimées. Continuer ?`))return;
-donneesFamille.semaines=donneesFamille.semaines.slice(0,nouveau);
+    if(!confirm(`Les semaines ${nouveau+1} à ${actuel} seront supprimées et leurs repas seront transférés dans les extras. Continuer ?`)){
+        document.getElementById("nombre-semaines").value=actuel;
+        return;
+    }
+
+    // Les repas des semaines retirées deviennent des Extras.
+    // On évite volontairement les doublons : un même repas ne peut
+    // exister qu'une seule fois dans les Extras.
+    const semainesRetirees=donneesFamille.semaines.slice(nouveau);
+    const extrasExistants=new Set(
+        donneesFamille.extras.map(e=>normaliserNom(e?.nom))
+    );
+
+    semainesRetirees.forEach(semaine=>{
+        (semaine||[]).forEach(repas=>{
+            if(!repas || !repas.nom) return;
+
+            const key=normaliserNom(repas.nom);
+            if(!key || extrasExistants.has(key)) return;
+
+            donneesFamille.extras.push({
+                nom:repas.nom,
+                ing:repas.ing||""
+            });
+            extrasExistants.add(key);
+        });
+    });
+
+    donneesFamille.semaines=donneesFamille.semaines.slice(0,nouveau);
 }else{
-for(let i=actuel;i<nouveau;i++)donneesFamille.semaines.push(creerSemaineVide());
+    for(let i=actuel;i<nouveau;i++)donneesFamille.semaines.push(creerSemaineVide());
 }
+
+document.getElementById("nombre-semaines").value=nouveau;
 await sauvegarderEtAfficher();
 }
 
