@@ -1,3411 +1,555 @@
 <!DOCTYPE html>
 <html lang="fr-CA">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planificateur Synchronisé 🍽️</title>
-
-    <style>
-
-        body {
-            font-family: sans-serif;
-            background-color: #f0f4f8;
-            padding: 10px;
-            color: #333;
-            margin: 0;
-        }
-
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 5px;
-            font-size: 22px;
-        }
-
-        .instruction {
-            text-align: center;
-            color: #7f8c8d;
-            margin-bottom: 25px;
-            font-size: 13px;
-            padding: 0 10px;
-        }
-
-        .login-box {
-            max-width: 400px;
-            margin: 10% auto;
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            text-align: center;
-            border-top: 5px solid #2980b9;
-        }
-
-        .login-box input {
-            width: 100%;
-            padding: 12px;
-            box-sizing: border-box;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            margin: 15px 0;
-            text-align: center;
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 12px;
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        .ajout-section {
-            background: #ebf5fb;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px auto;
-            max-width: 650px;
-            border: 1px solid #a9cce3;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .ajout-section input {
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 16px;
-            min-width: 200px;
-            flex: 1;
-        }
-
-        .btn-ajouter {
-            padding: 12px 15px;
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 15px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .card {
-            background: #fdfdfd;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            border-top: 4px solid #3498db;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        h3 {
-            margin-top: 0;
-            color: #2c3e50;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 5px;
-            font-size: 18px;
-        }
-
-        .repas-block {
-            background: #f1f7fc;
-            margin: 12px 0;
-            padding: 14px 12px;
-            border-radius: 6px;
-            border-left: 4px solid #2980b9;
-        }
-
-        .repas-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .select-echange {
-            font-size: 14px;
-            padding: 7px 9px;
-            border-radius: 4px;
-            border: 1px solid #f39c12;
-            background-color: #fff8ee;
-            color: #d35400;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        .btn-epicerie {
-            padding: 12px;
-            background-color: #34495e;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 14px;
-            margin-top: 10px;
-            width: 100%;
-            text-align: center;
-        }
-
-        .repas-nom {
-            color: #2980b9;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            flex: 1;
-            word-break: break-word;
-        }
-
-        .extra-box {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .extra-item {
-            background: #fff3e0;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #ffe0b2;
-            font-weight: bold;
-            color: #e65100;
-            min-width: 160px;
-            text-align: center;
-            font-size: 15px;
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-        }
-
-        .extra-nom {
-            flex: 1;
-            cursor: pointer;
-            word-break: break-word;
-        }
-
-        .loading-text {
-            text-align: center;
-            font-weight: bold;
-            color: #7f8c8d;
-            font-size: 16px;
-            padding: 10px;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 100;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-        }
-
-        .modal-box {
-            background: white;
-            margin: 15% auto;
-            padding: 20px;
-            width: 90%;
-            max-width: 450px;
-            border-radius: 10px;
-            box-sizing: border-box;
-        }
-
-        .modal-box textarea {
-            width: 100%;
-            height: 200px;
-            margin-top: 12px;
-            padding: 10px;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 16px;
-            resize: none;
-        }
-
-        .btn-action {
-            padding: 12px 15px;
-            background: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            font-size: 15px;
-            width: 100%;
-        }
-
-        .btn-close {
-            background: #95a5a6;
-            float: right;
-            padding: 8px 14px;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        .liste-resume {
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid #eee;
-            margin-top: 15px;
-            max-height: 300px;
-            overflow-y: auto;
-            text-align: left;
-            font-size: 15px;
-            line-height: 1.6;
-            white-space: pre-line;
-        }
-
-        .logout-zone {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            font-size: 13px;
-            background: #f8f9f9;
-            padding: 10px;
-            border-radius: 6px;
-            align-items: center;
-        }
-
-        .btn-logout {
-            background: #e74c3c;
-            border: none;
-            color: white;
-            cursor: pointer;
-            font-weight: bold;
-            padding: 6px 12px;
-            border-radius: 4px;
-        }
-
-
-        /* =====================================================
-           FENÊTRE DE REMPLACEMENT
-        ===================================================== */
-
-        .modal-remplacement {
-            display: none;
-            position: fixed;
-            z-index: 200;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.55);
-        }
-
-        .modal-remplacement-box {
-            background: white;
-            margin: 5vh auto;
-            width: 92%;
-            max-width: 500px;
-            max-height: 90vh;
-            border-radius: 12px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .remplacement-header {
-            padding: 18px 20px 10px 20px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .remplacement-header h2 {
-            margin: 0 0 12px 0;
-            color: #2c3e50;
-            font-size: 20px;
-        }
-
-        .remplacement-recherche {
-            width: 100%;
-            padding: 12px;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 16px;
-            outline: none;
-        }
-
-        .remplacement-recherche:focus {
-            border-color: #2980b9;
-        }
-
-        .remplacement-liste {
-            padding: 10px 15px 15px 15px;
-            overflow-y: auto;
-            flex: 1;
-        }
-
-        .remplacement-section-titre {
-            font-size: 13px;
-            font-weight: bold;
-            color: #7f8c8d;
-            margin: 14px 5px 6px 5px;
-            text-transform: uppercase;
-        }
-
-        .remplacement-section-titre:first-child {
-            margin-top: 5px;
-        }
-
-        .remplacement-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            width: 100%;
-            box-sizing: border-box;
-            margin-bottom: 6px;
-        }
-
-        .btn-choisir-repas {
-            flex: 1;
-            text-align: left;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            background: #f8fafc;
-            color: #2c3e50;
-            font-size: 15px;
-            cursor: pointer;
-        }
-
-        .btn-choisir-repas:hover {
-            background: #ebf5fb;
-            border-color: #3498db;
-        }
-
-        .btn-choisir-repas.repas-actuel {
-            background: #eaf2f8;
-            color: #7f8c8d;
-            cursor: default;
-            border-color: #d5dbdb;
-        }
-
-        .btn-supprimer-extra {
-            flex: 0 0 auto;
-            width: 42px;
-            height: 42px;
-            padding: 0;
-            border: 1px solid #f5b7b1;
-            border-radius: 6px;
-            background: #fdedec;
-            color: #c0392b;
-            cursor: pointer;
-            font-size: 17px;
-        }
-
-        .btn-supprimer-extra:hover {
-            background: #f5b7b1;
-        }
-
-        .remplacement-vide {
-            text-align: center;
-            color: #7f8c8d;
-            padding: 25px 10px;
-            font-size: 15px;
-        }
-
-        .remplacement-info {
-            background: #ebf5fb;
-            border: 1px solid #aed6f1;
-            color: #2874a6;
-            padding: 10px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            margin-bottom: 10px;
-            line-height: 1.4;
-        }
-
-        .btn-fermer-remplacement {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 0;
-            background: #95a5a6;
-            color: white;
-            font-weight: bold;
-            font-size: 15px;
-            cursor: pointer;
-        }
-
-
-        /* =====================================================
-           ADAPTATION PETITS ÉCRANS
-        ===================================================== */
-
-        @media (max-width: 600px) {
-
-            .logout-zone {
-                flex-direction: column;
-                gap: 10px;
-                align-items: stretch;
-                text-align: center;
-            }
-
-            .logout-zone > div {
-                justify-content: center;
-                flex-wrap: wrap;
-            }
-
-            .repas-header {
-                gap: 6px;
-            }
-
-            .select-echange {
-                font-size: 12px;
-                padding: 7px 6px;
-            }
-
-            .modal-remplacement-box {
-                margin: 2vh auto;
-                max-height: 96vh;
-            }
-
-        }
-
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planificateur Synchronisé 🍽️</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:sans-serif;background:#f0f4f8;padding:10px;color:#333;margin:0}
+.container{max-width:1100px;margin:0 auto;background:#fff;padding:15px;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,.1)}
+.login-box{max-width:430px;margin:8% auto;background:#fff;padding:30px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,.15);text-align:center;border-top:5px solid #2980b9}
+.login-box input{width:100%;padding:12px;box-sizing:border-box;font-size:16px;border:1px solid #ccc;border-radius:6px;margin:10px 0}
+.btn-login,.btn-action{width:100%;padding:12px;background:#2980b9;color:#fff;border:0;border-radius:6px;font-weight:bold;font-size:16px;cursor:pointer}
+.btn-action{background:#27ae60;margin-top:10px;font-size:15px}
+.btn-login:disabled,.btn-action:disabled{opacity:.6;cursor:not-allowed}
+.ajout-section{background:#ebf5fb;padding:15px;border-radius:8px;margin:20px auto;max-width:700px;border:1px solid #a9cce3;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ajout-section input{padding:12px;border:1px solid #ccc;border-radius:4px;font-size:16px;min-width:200px;flex:1}
+.btn-ajouter{padding:12px 15px;background:#2980b9;color:#fff;border:0;border-radius:4px;font-weight:bold;cursor:pointer;font-size:15px}
+.logout-zone{display:flex;justify-content:space-between;gap:10px;margin-bottom:15px;font-size:13px;background:#f8f9f9;padding:10px;border-radius:6px;align-items:center;flex-wrap:wrap}
+.btn-logout{background:#e74c3c;border:0;color:#fff;cursor:pointer;font-weight:bold;padding:6px 12px;border-radius:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:15px;margin-bottom:30px}
+.card{background:#fdfdfd;padding:15px;border-radius:8px;border:1px solid #ddd;border-top:4px solid #3498db}
+h1{text-align:center;color:#2c3e50;margin-bottom:5px;font-size:22px}
+h3{margin-top:0;color:#2c3e50;border-bottom:1px solid #eee;padding-bottom:5px;font-size:18px}
+.instruction{text-align:center;color:#7f8c8d;margin-bottom:25px;font-size:13px}
+.repas-block{background:#f1f7fc;margin:12px 0;padding:12px;border-radius:6px;border-left:4px solid #2980b9}
+.repas-header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.repas-nom{color:#2980b9;font-weight:bold;font-size:16px;cursor:pointer;flex:1;word-break:break-word}
+.btn-remplacer{font-size:18px;padding:5px 9px;border-radius:5px;border:1px solid #f39c12;background:#fff8ee;color:#d35400;cursor:pointer}
+.btn-epicerie{padding:12px;background:#34495e;color:#fff;border:0;border-radius:4px;font-weight:bold;cursor:pointer;font-size:14px;margin-top:10px;width:100%}
+.extra-box{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}
+.extra-wrap{display:flex;flex:1;min-width:180px;gap:4px}
+.extra-item{background:#fff3e0;padding:12px 15px;border-radius:6px;border:1px solid #ffe0b2;font-weight:bold;color:#e65100;cursor:pointer;font-size:15px;flex:1;text-align:center}
+.btn-delete-extra{background:#fff0f0;border:1px solid #ffb3b3;color:#c0392b;border-radius:6px;cursor:pointer;width:48px}
+.loading-text{text-align:center;font-weight:bold;color:#7f8c8d;font-size:16px;padding:10px}
+.settings{background:#f8f9f9;border:1px solid #ddd;padding:12px;border-radius:8px;margin:15px 0;display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap}
+.settings select{padding:8px;border:1px solid #bbb;border-radius:5px;font-size:15px}
+.modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.5);overflow:auto}
+.modal-box{background:#fff;margin:4vh auto;padding:20px;width:94%;max-width:700px;border-radius:10px;box-sizing:border-box;max-height:92vh;overflow:auto}
+.modal-box.small{max-width:450px}
+.btn-close{float:right;background:#95a5a6;padding:8px 14px;color:#fff;border:0;border-radius:4px;cursor:pointer;font-weight:bold}
+.search-box{width:100%;padding:14px;font-size:20px;border:1px solid #2980b9;border-radius:8px;margin:12px 0 18px}
+.info-box{background:#eaf5ff;border:1px solid #acd7f5;color:#2471a3;padding:14px;border-radius:8px;margin:12px 0 20px;line-height:1.5}
+.section-title{font-size:18px;font-weight:bold;color:#7f8c8d;margin:18px 0 8px}
+.choice{display:flex;align-items:center;gap:10px;background:#f7f9fa;border:1px solid #ddd;border-radius:8px;padding:13px;margin:7px 0;cursor:pointer;font-size:17px}
+.choice:hover{background:#edf5fb}
+.choice .icon{font-size:22px}
+.choice-extra{display:flex;gap:6px;align-items:center}
+.choice-extra .choice{flex:1;margin:7px 0}
+.btn-delete-modal{background:#fff0f0;border:1px solid #ffb3b3;color:#c0392b;border-radius:6px;padding:8px 12px;cursor:pointer}
+textarea{width:100%;height:200px;margin-top:12px;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:16px;resize:vertical}
+.liste-resume{background:#f9f9f9;padding:15px;border-radius:6px;border:1px solid #eee;margin-top:15px;max-height:55vh;overflow-y:auto;text-align:left;font-size:15px;line-height:1.6;white-space:pre-line}
+.empty{color:#888;text-align:center;padding:15px}
+@media(max-width:600px){.modal-box{margin:2vh auto;width:96%;padding:16px}.repas-header{align-items:flex-start}.logout-zone{font-size:12px}}
+</style>
 </head>
-
-
 <body>
 
-
-<!-- =========================================================
-     ÉCRAN DE CONNEXION
-========================================================== -->
-
 <div id="ecran-login" class="login-box">
-
-    <h2>🔑 Accès Planificateur</h2>
-
-    <p id="login-instruction">
-        Connectez-vous à votre famille pour synchroniser vos appareils.
-    </p>
-
-    <input
-        type="email"
-        id="input-code-famille"
-        placeholder="Courriel">
-
-    <input
-        type="password"
-        id="input-password-famille"
-        placeholder="Mot de passe (8 caractères minimum)">
-
-    <input
-        type="password"
-        id="input-password-confirm"
-        placeholder="Confirmer le mot de passe"
-        style="display:none;">
-
-    <button
-        class="btn-login"
-        id="btn-login-action">
-        Se connecter
-    </button>
-
-    <button
-        class="btn-login"
-        id="btn-creer-famille"
-        style="background-color:#27ae60; margin-top:10px;">
-        Créer une nouvelle famille
-    </button>
-
-    <button
-        class="btn-login"
-        id="btn-annuler-creation"
-        style="display:none; background-color:#95a5a6; margin-top:10px;">
-        Annuler
-    </button>
-
+<h2>🔑 Accès Planificateur</h2>
+<p id="login-instruction">Connectez-vous à votre famille pour synchroniser vos appareils.</p>
+<input type="email" id="input-code-famille" placeholder="Courriel">
+<input type="password" id="input-password-famille" placeholder="Mot de passe (8 caractères minimum)">
+<input type="password" id="input-password-confirm" placeholder="Confirmer le mot de passe" style="display:none">
+<button class="btn-login" id="btn-login-action">Se connecter</button>
+<button class="btn-login" id="btn-creer-famille" style="background:#27ae60;margin-top:10px">Créer une nouvelle famille</button>
+<button class="btn-login" id="btn-annuler-creation" style="display:none;background:#95a5a6;margin-top:10px">Annuler</button>
 </div>
 
-
-<!-- =========================================================
-     ÉCRAN PRINCIPAL
-========================================================== -->
-
-<div id="ecran-principal" class="container" style="display: none;">
-
-    <div class="logout-zone">
-
-        <span>
-            🏠 Espace Synchro :
-            <strong id="affichage-code-actif"></strong>
-        </span>
-
-        <div style="display:flex;gap:6px;align-items:center;">
-
-            <button
-                class="btn-logout"
-                id="btn-changer-mdp-action"
-                style="background:#8e44ad;">
-                🔐 Changer le mot de passe
-            </button>
-
-            <button
-                class="btn-logout"
-                id="btn-logout-action">
-                Changer de famille
-            </button>
-
-        </div>
-
-    </div>
-
-
-    <h1>Mon Planificateur de Soupers</h1>
-
-    <p class="instruction">
-        Les repas ajoutés vont dans les extras.
-        Vos choix sont automatiquement partagés entre vos appareils.
-    </p>
-
-
-    <!-- AJOUT D'UN EXTRA -->
-
-    <div class="ajout-section">
-
-        <input
-            type="text"
-            id="nouveauRepasNom"
-            placeholder="Nom du repas (ex: Vol-au-vent)">
-
-        <button
-            class="btn-ajouter"
-            id="btn-ajouter-action">
-            ➕ Ajouter aux extras
-        </button>
-
-    </div>
-
-
-    <div
-        id="loading"
-        class="loading-text"
-        style="display:none;">
-        🔄 Synchronisation cloud...
-    </div>
-
-
-    <!-- SEMAINES -->
-
-    <div
-        id="menu-grid"
-        class="grid">
-    </div>
-
-
-    <!-- EXTRAS -->
-
-    <div
-        class="card"
-        style="border-top: 4px solid #f39c12; background: #fffcf7;">
-
-        <h3>Ma banque de repas en extra</h3>
-
-        <div
-            id="extras-liste"
-            class="extra-box">
-        </div>
-
-    </div>
-
+<div id="ecran-principal" class="container" style="display:none">
+<div class="logout-zone">
+<span>🏠 Espace Synchro : <strong id="affichage-code-actif"></strong></span>
+<div>
+<button class="btn-logout" id="btn-changer-mdp-action" style="background:#8e44ad">🔐 Mot de passe</button>
+<button class="btn-logout" id="btn-logout-action">Changer de famille</button>
+</div>
 </div>
 
+<h1>Mon Planificateur de Soupers</h1>
+<p class="instruction">Les repas ajoutés vont dans les extras. Vos choix sont automatiquement partagés entre vos appareils.</p>
 
-<!-- =========================================================
-     FENÊTRE CHANGEMENT MOT DE PASSE
-========================================================== -->
-
-<div id="box-motdepasse" class="modal">
-
-    <div class="modal-box">
-
-        <button
-            class="btn-close"
-            id="btn-fermer-mdp-action">
-            Fermer
-        </button>
-
-        <h2>🔐 Changer le mot de passe</h2>
-
-        <input
-            type="password"
-            id="ancien-password"
-            placeholder="Mot de passe actuel"
-            style="width:100%;padding:12px;box-sizing:border-box;margin:10px 0;border:1px solid #ccc;border-radius:6px;">
-
-        <input
-            type="password"
-            id="nouveau-password"
-            placeholder="Nouveau mot de passe (8 caractères minimum)"
-            style="width:100%;padding:12px;box-sizing:border-box;margin:10px 0;border:1px solid #ccc;border-radius:6px;">
-
-        <input
-            type="password"
-            id="nouveau-password-confirm"
-            placeholder="Confirmer le nouveau mot de passe"
-            style="width:100%;padding:12px;box-sizing:border-box;margin:10px 0;border:1px solid #ccc;border-radius:6px;">
-
-        <button
-            class="btn-action"
-            id="btn-sauver-mdp-action">
-            💾 Enregistrer le nouveau mot de passe
-        </button>
-
-    </div>
-
+<div class="settings">
+<strong>Nombre de semaines :</strong>
+<select id="nombre-semaines">
+<option value="2">2</option><option value="3">3</option><option value="4">4</option>
+<option value="5">5</option><option value="6">6</option>
+</select>
+<button class="btn-ajouter" id="btn-appliquer-semaines">Appliquer</button>
 </div>
 
+<div class="ajout-section">
+<input type="text" id="nouveauRepasNom" placeholder="Nom du repas (ex: Pizza)">
+<button class="btn-ajouter" id="btn-ajouter-action">➕ Ajouter aux extras</button>
+</div>
+<div id="loading" class="loading-text" style="display:none">🔄 Synchronisation cloud...</div>
+<div id="menu-grid" class="grid"></div>
 
-<!-- =========================================================
-     FENÊTRE INGRÉDIENTS
-========================================================== -->
+<div class="card" style="border-top:4px solid #f39c12;background:#fffcf7">
+<h3>⭐ Ma banque de repas en extra</h3>
+<div id="extras-liste" class="extra-box"></div>
+</div>
+</div>
 
+<!-- MODAL REMPLACEMENT -->
+<div id="box-remplacement" class="modal">
+<div class="modal-box">
+<button class="btn-close" onclick="fermerRemplacement()">Fermer</button>
+<h2>🔄 Remplacer le repas</h2>
+<input id="recherche-repas" class="search-box" type="text" placeholder="Rechercher un repas...">
+<div class="info-box">💡 Si le repas choisi est déjà dans une autre semaine, les deux repas seront automatiquement échangés.</div>
+<div id="remplacement-liste"></div>
+</div>
+</div>
+
+<!-- MODAL INGREDIENTS -->
 <div id="box-ingredients" class="modal">
-
-    <div class="modal-box">
-
-        <button
-            class="btn-close"
-            id="btn-fermer-ing-action">
-            Fermer
-        </button>
-
-        <h2>Ingrédients</h2>
-
-        <textarea
-            id="modal-texte"
-            placeholder="Liste des ingrédients..."></textarea>
-
-        <button
-            class="btn-action"
-            id="btn-sauver-ing-action">
-            💾 Enregistrer les détails
-        </button>
-
-    </div>
-
+<div class="modal-box small">
+<button class="btn-close" id="btn-fermer-ing-action">Fermer</button>
+<h2 id="ingredients-titre">Ingrédients</h2>
+<textarea id="modal-texte" placeholder="Liste des ingrédients..."></textarea>
+<button class="btn-action" id="btn-sauver-ing-action">💾 Enregistrer les détails</button>
+</div>
 </div>
 
-
-<!-- =========================================================
-     FENÊTRE LISTE D'ÉPICERIE
-========================================================== -->
-
+<!-- MODAL EPICERIE -->
 <div id="box-epicerie" class="modal">
-
-    <div class="modal-box">
-
-        <button
-            class="btn-close"
-            id="btn-fermer-epi-action">
-            Fermer
-        </button>
-
-        <h2 id="epicerie-titre">
-            🛒 Liste d'épicerie
-        </h2>
-
-        <div
-            id="epicerie-corps"
-            class="liste-resume">
-        </div>
-
-    </div>
-
+<div class="modal-box">
+<button class="btn-close" id="btn-fermer-epi-action">Fermer</button>
+<h2 id="epicerie-titre">🛒 Liste d'épicerie</h2>
+<div id="epicerie-corps" class="liste-resume"></div>
+</div>
 </div>
 
-
-<!-- =========================================================
-     FENÊTRE REMPLACEMENT D'UN REPAS
-========================================================== -->
-
-<div
-    id="box-remplacement"
-    class="modal-remplacement">
-
-    <div class="modal-remplacement-box">
-
-        <div class="remplacement-header">
-
-            <h2>
-                🔄 Remplacer le repas
-            </h2>
-
-            <input
-                type="text"
-                id="recherche-repas"
-                class="remplacement-recherche"
-                placeholder="🔎 Rechercher un repas..."
-                autocomplete="off">
-
-        </div>
-
-
-        <div
-            id="liste-remplacement"
-            class="remplacement-liste">
-        </div>
-
-
-        <button
-            class="btn-fermer-remplacement"
-            id="btn-fermer-remplacement">
-            Fermer
-        </button>
-
-    </div>
-
+<!-- MODAL MOT DE PASSE -->
+<div id="box-motdepasse" class="modal">
+<div class="modal-box small">
+<button class="btn-close" id="btn-fermer-mdp-action">Fermer</button>
+<h2>🔐 Changer le mot de passe</h2>
+<input type="password" id="ancien-password" placeholder="Mot de passe actuel" style="width:100%;padding:12px;margin:8px 0">
+<input type="password" id="nouveau-password" placeholder="Nouveau mot de passe (8 caractères minimum)" style="width:100%;padding:12px;margin:8px 0">
+<input type="password" id="nouveau-password-confirm" placeholder="Confirmer le nouveau mot de passe" style="width:100%;padding:12px;margin:8px 0">
+<button class="btn-action" id="btn-sauver-mdp-action">💾 Enregistrer le nouveau mot de passe</button>
 </div>
-
+</div>
 
 <script>
-
-
-// =========================================================
-// ACCÈS TECHNIQUE SÉCURISÉ JSONBIN
-// =========================================================
-
+/* ============================================================
+   CONFIGURATION JSONBIN
+   ============================================================ */
 const MASTER_KEY =
     "$2a$10$byE8Ka5bI4s4RgiwPxWSPeMjgc18UeBrHYommbd56GAcJzL95AZce";
 
 const BIN_ID =
     "6a43fe04da38895dfe17486b";
 
-const JSONBIN_URL =
-    `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-
-// =========================================================
-// VARIABLES
-// =========================================================
-
-let codeFamilleActif = "";
-
-let donneesFamille = {
-    semaines: [],
-    extras: []
-};
-
-let modeCreationFamille = false;
-
-let typePlatSelectionne = "";
-let sIdxSelectionne = 0;
-let rIdxSelectionne = 0;
-let extraIdxSelectionne = 0;
-
-
-// Variables utilisées par la fenêtre de remplacement
-
-let sIdxRemplacement = 0;
-let rIdxRemplacement = 0;
-
-
-// =========================================================
-// BANQUE DE REPAS
-// =========================================================
-
+/* Repas de base. Ils sont disponibles pour remplacer un repas
+   seulement lorsqu'ils ne sont pas déjà dans les Extras. */
 const R_BASE = [
-    "Pâté chinois",
-    "Poulet entier",
-    "Belogne rôti",
-    "Poke Bowl",
-    "Sloppy Joe",
-    "Général Tao",
-    "Patate au jambon",
-    "Filet de poisson",
-    "Steak haché",
-    "Burger poulet",
-    "Filet de porc",
-    "Guedille thon",
-    "Boulette M&M",
-    "Fajitas",
-    "Saucisses sirop",
-    "Casserole thon",
-    "Spaghetti",
-    "Poulet rouge",
-    "Épaule porc",
-    "Macaroni viande",
-    "Boeuf coréen",
-    "Poulet Parm",
-    "Carbonara",
-    "Mac & Cheese"
+"Pâté chinois","Poulet entier","Belogne rôti","Poke Bowl","Sloppy Joe",
+"Général Tao","Patate au jambon","Filet de poisson","Steak haché",
+"Burger poulet","Filet de porc","Guedille thon","Boulette M&M","Fajitas",
+"Saucisses sirop","Casserole thon","Spaghetti","Poulet rouge","Épaule porc",
+"Macaroni viande","Boeuf coréen","Poulet Parm","Carbonara","Mac & Cheese"
 ];
+const E_BASE = ["Lasagne","Tortellini rosée","Club sandwich","Vol-au-vent","Burritos Bowl","Quesedillas"];
 
-const E_BASE = [
-    "Lasagne",
-    "Tortellini rosée",
-    "Club sandwich",
-    "Vol-au-vent",
-    "Burritos Bowl",
-    "Quesedillas"
-];
+let codeFamilleActif="";
+let donneesFamille={semaines:[],extras:[]};
+let modeCreationFamille=false;
+let sIdxSelectionne=0,rIdxSelectionne=0;
+let typePlatSelectionne="",extraIdxSelectionne=0;
 
-
-// =========================================================
-// INITIALISATION
-// =========================================================
-
-document.addEventListener("DOMContentLoaded", () => {
-
-
-    document
-        .getElementById("btn-login-action")
-        .addEventListener("click", authentifierFamille);
-
-
-    document
-        .getElementById("btn-creer-famille")
-        .addEventListener("click", preparerCreationFamille);
-
-
-    document
-        .getElementById("btn-annuler-creation")
-        .addEventListener("click", annulerCreationFamille);
-
-
-    document
-        .getElementById("btn-changer-mdp-action")
-        .addEventListener("click", ouvrirChangementMotDePasse);
-
-
-    document
-        .getElementById("btn-fermer-mdp-action")
-        .addEventListener("click", fermerChangementMotDePasse);
-
-
-    document
-        .getElementById("btn-sauver-mdp-action")
-        .addEventListener("click", changerMotDePasse);
-
-
-    document
-        .getElementById("btn-logout-action")
-        .addEventListener("click", deconnexion);
-
-
-    document
-        .getElementById("btn-ajouter-action")
-        .addEventListener("click", ajouterNouveauRepas);
-
-
-    document
-        .getElementById("btn-fermer-ing-action")
-        .addEventListener("click", fermerFenetre);
-
-
-    document
-        .getElementById("btn-sauver-ing-action")
-        .addEventListener("click", sauverIngredients);
-
-
-    document
-        .getElementById("btn-fermer-epi-action")
-        .addEventListener("click", fermerEpicerie);
-
-
-    // Fenêtre remplacement
-
-    document
-        .getElementById("btn-fermer-remplacement")
-        .addEventListener("click", fermerFenetreRemplacement);
-
-
-    document
-        .getElementById("recherche-repas")
-        .addEventListener("input", afficherListeRemplacement);
-
-
-    // ENTER dans le courriel
-
-    document
-        .getElementById("input-code-famille")
-        .addEventListener("keydown", function(e) {
-
-            if (e.key === "Enter") {
-
-                e.preventDefault();
-
-                document
-                    .getElementById("btn-login-action")
-                    .click();
-            }
-
-        });
-
-
-    // ENTER dans le mot de passe
-
-    document
-        .getElementById("input-password-famille")
-        .addEventListener("keydown", function(e) {
-
-            if (e.key === "Enter") {
-
-                e.preventDefault();
-
-                document
-                    .getElementById("btn-login-action")
-                    .click();
-            }
-
-        });
-
-
-    // Récupération du courriel sauvegardé
-
-    let m =
-        localStorage.getItem("code_famille_sauve");
-
-    if (m) {
-
-        document
-            .getElementById("input-code-famille")
-            .value = m;
-    }
-
+document.addEventListener("DOMContentLoaded",()=>{
+document.getElementById("btn-login-action").addEventListener("click",authentifierFamille);
+document.getElementById("btn-creer-famille").addEventListener("click",preparerCreationFamille);
+document.getElementById("btn-annuler-creation").addEventListener("click",annulerCreationFamille);
+document.getElementById("btn-logout-action").addEventListener("click",deconnexion);
+document.getElementById("btn-ajouter-action").addEventListener("click",ajouterNouveauRepas);
+document.getElementById("btn-appliquer-semaines").addEventListener("click",modifierNombreSemaines);
+document.getElementById("btn-fermer-ing-action").addEventListener("click",fermerFenetre);
+document.getElementById("btn-sauver-ing-action").addEventListener("click",sauverIngredients);
+document.getElementById("btn-fermer-epi-action").addEventListener("click",fermerEpicerie);
+document.getElementById("btn-changer-mdp-action").addEventListener("click",ouvrirChangementMotDePasse);
+document.getElementById("btn-fermer-mdp-action").addEventListener("click",fermerChangementMotDePasse);
+document.getElementById("btn-sauver-mdp-action").addEventListener("click",changerMotDePasse);
+document.getElementById("recherche-repas").addEventListener("input",afficherChoixRemplacement);
+["input-code-famille","input-password-famille","input-password-confirm"].forEach(id=>{
+const el=document.getElementById(id); if(el) el.addEventListener("keydown",e=>{if(e.key==="Enter") document.getElementById("btn-login-action").click()});
+});
+const m=localStorage.getItem("code_famille_sauve");
+const session=localStorage.getItem("session_famille_auth");
+if(m && session==="1"){codeFamilleActif=m;chargerMenuDepuisCloud();}
 });
 
-
-// =========================================================
-// CRÉATION FAMILLE
-// =========================================================
-
-function preparerCreationFamille() {
-
-    modeCreationFamille = true;
-
-    document
-        .getElementById("login-instruction")
-        .innerText =
-        "Créez une nouvelle famille. Le nom doit être unique.";
-
-
-    document
-        .getElementById("input-password-confirm")
-        .style.display = "block";
-
-
-    document
-        .getElementById("btn-login-action")
-        .innerText = "Créer la famille";
-
-
-    document
-        .getElementById("btn-creer-famille")
-        .style.display = "none";
-
-
-    document
-        .getElementById("btn-annuler-creation")
-        .style.display = "block";
+/* ---------------- JSONBIN ---------------- */
+async function lireBaseCloud(){
+const res=await fetch(`${JSONBIN_URL}/latest`,{headers:{"X-Master-Key":MASTER_KEY},cache:"no-store"});
+if(!res.ok)throw new Error(`JSONBin lecture HTTP ${res.status}`);
+const paquet=await res.json();
+return paquet.record||paquet||{};
+}
+async function sauvegarderBaseCloud(base){
+const res=await fetch(JSONBIN_URL,{method:"PUT",headers:{"Content-Type":"application/json","X-Master-Key":MASTER_KEY},body:JSON.stringify(base)});
+if(!res.ok)throw new Error(`JSONBin sauvegarde HTTP ${res.status}: ${await res.text()}`);
+}
+async function hacherMotDePasse(password){
+const data=new TextEncoder().encode(password);
+const hash=await crypto.subtle.digest("SHA-256",data);
+return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
-
-// =========================================================
-// ANNULER CRÉATION
-// =========================================================
-
-function annulerCreationFamille() {
-
-    modeCreationFamille = false;
-
-    document
-        .getElementById("login-instruction")
-        .innerText =
-        "Connectez-vous à votre famille pour synchroniser vos appareils.";
-
-
-    document
-        .getElementById("input-password-confirm")
-        .style.display = "none";
-
-
-    document
-        .getElementById("input-password-confirm")
-        .value = "";
-
-
-    document
-        .getElementById("input-password-famille")
-        .value = "";
-
-
-    document
-        .getElementById("btn-login-action")
-        .innerText = "Se connecter";
-
-
-    document
-        .getElementById("btn-creer-famille")
-        .style.display = "block";
-
-
-    document
-        .getElementById("btn-annuler-creation")
-        .style.display = "none";
+/* ---------------- CONNEXION ---------------- */
+function preparerCreationFamille(){
+modeCreationFamille=true;
+document.getElementById("login-instruction").innerText="Créez une nouvelle famille.";
+document.getElementById("input-password-confirm").style.display="block";
+document.getElementById("btn-login-action").innerText="Créer la famille";
+document.getElementById("btn-creer-famille").style.display="none";
+document.getElementById("btn-annuler-creation").style.display="block";
+}
+function annulerCreationFamille(){
+modeCreationFamille=false;
+document.getElementById("login-instruction").innerText="Connectez-vous à votre famille pour synchroniser vos appareils.";
+document.getElementById("input-password-confirm").style.display="none";
+document.getElementById("input-password-confirm").value="";
+document.getElementById("input-password-famille").value="";
+document.getElementById("btn-login-action").innerText="Se connecter";
+document.getElementById("btn-creer-famille").style.display="block";
+document.getElementById("btn-annuler-creation").style.display="none";
+}
+async function authentifierFamille(){
+const s=document.getElementById("input-code-famille").value.trim().toLowerCase();
+const password=document.getElementById("input-password-famille").value;
+if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)){alert("Veuillez entrer une adresse courriel valide.");return;}
+if(password.length<8){alert("Le mot de passe doit contenir au moins 8 caractères.");return;}
+const btn=document.getElementById("btn-login-action");btn.disabled=true;
+try{
+const base=await lireBaseCloud(), famille=base[s];
+if(modeCreationFamille){
+if(password!==document.getElementById("input-password-confirm").value){alert("Les deux mots de passe ne correspondent pas.");return;}
+if(famille){alert("Cette famille existe déjà.");return;}
+codeFamilleActif=s;initialiserDonnees(4);
+base[s]={passwordHash:await hacherMotDePasse(password),semaines:donneesFamille.semaines,extras:donneesFamille.extras};
+await sauvegarderBaseCloud(base);
+localStorage.setItem("code_famille_sauve",s);localStorage.setItem("session_famille_auth","1");
+modeCreationFamille=false;await chargerMenuDepuisCloud();return;
+}
+if(!famille){alert("Cette famille n'existe pas.");return;}
+if(!famille.passwordHash){alert("Cette famille n'a pas de mot de passe compatible avec cette version.");return;}
+if(await hacherMotDePasse(password)!==famille.passwordHash){alert("Mot de passe incorrect.");return;}
+codeFamilleActif=s;localStorage.setItem("code_famille_sauve",s);localStorage.setItem("session_famille_auth","1");
+await chargerMenuDepuisCloud();
+}catch(e){console.error(e);alert("Impossible de communiquer avec le cloud.");}
+finally{btn.disabled=false;}
+}
+async function chargerMenuDepuisCloud(){
+document.getElementById("loading").style.display="block";
+try{
+const base=await lireBaseCloud(),famille=base[codeFamilleActif];
+if(!famille)throw new Error("Famille introuvable");
+donneesFamille.semaines=Array.isArray(famille.semaines)?famille.semaines:[];
+donneesFamille.extras=Array.isArray(famille.extras)?famille.extras:[];
+normaliserDonnees();
+document.getElementById("ecran-login").style.display="none";
+document.getElementById("ecran-principal").style.display="block";
+document.getElementById("affichage-code-actif").innerText=codeFamilleActif;
+document.getElementById("nombre-semaines").value=donneesFamille.semaines.length||4;
+afficherInterface();
+}catch(e){console.error(e);localStorage.removeItem("session_famille_auth");document.getElementById("ecran-login").style.display="block";document.getElementById("ecran-principal").style.display="none";alert("Impossible de charger les données.");}
+finally{document.getElementById("loading").style.display="none";}
+}
+function initialiserDonnees(nb){
+donneesFamille.semaines=[];
+const total=Math.max(2,Math.min(6,nb||4));
+const pool=R_BASE.slice();
+for(let s=0;s<total;s++){
+const semaine=[];
+for(let r=0;r<4;r++){
+const nom=pool[(s*4+r)%pool.length];
+semaine.push({nom,ing:""});
+}
+donneesFamille.semaines.push(semaine);
+}
+donneesFamille.extras=E_BASE.map(n=>({nom:n,ing:""}));
+}
+function normaliserDonnees(){
+if(!donneesFamille.semaines.length)initialiserDonnees(4);
+donneesFamille.semaines=donneesFamille.semaines.slice(0,6);
+while(donneesFamille.semaines.length<2)donneesFamille.semaines.push(creerSemaineVide());
+donneesFamille.semaines=donneesFamille.semaines.map(s=>Array.isArray(s)?s:[]).map(s=>{
+while(s.length<4)s.push({nom:"Repas libre",ing:""});
+return s.slice(0,4).map(r=>r||{nom:"Repas libre",ing:""});
+});
+donneesFamille.extras=(donneesFamille.extras||[]).filter(e=>e&&e.nom).map(e=>({nom:e.nom,ing:e.ing||""}));
+}
+function creerSemaineVide(){
+return [{nom:R_BASE[0],ing:""},{nom:R_BASE[1],ing:""},{nom:R_BASE[2],ing:""},{nom:R_BASE[3],ing:""}];
+}
+async function pousserVersCloud(){
+const base=await lireBaseCloud(),ancienne=base[codeFamilleActif];
+if(!ancienne)throw new Error("Famille introuvable");
+base[codeFamilleActif]={...ancienne,semaines:donneesFamille.semaines,extras:donneesFamille.extras};
+await sauvegarderBaseCloud(base);
 }
 
-
-// =========================================================
-// HACHAGE MOT DE PASSE
-// =========================================================
-
-async function hacherMotDePasse(password) {
-
-    const data =
-        new TextEncoder().encode(password);
-
-    const hashBuffer =
-        await crypto.subtle.digest(
-            "SHA-256",
-            data
-        );
-
-    return Array
-        .from(new Uint8Array(hashBuffer))
-        .map(b =>
-            b.toString(16).padStart(2, "0")
-        )
-        .join("");
+/* ---------------- NOMBRE DE SEMAINES ---------------- */
+async function modifierNombreSemaines(){
+const nouveau=parseInt(document.getElementById("nombre-semaines").value);
+const actuel=donneesFamille.semaines.length;
+if(nouveau===actuel)return;
+if(nouveau<actuel){
+if(!confirm(`Les semaines ${nouveau+1} à ${actuel} seront supprimées. Continuer ?`))return;
+donneesFamille.semaines=donneesFamille.semaines.slice(0,nouveau);
+}else{
+for(let i=actuel;i<nouveau;i++)donneesFamille.semaines.push(creerSemaineVide());
+}
+await sauvegarderEtAfficher();
 }
 
-
-// =========================================================
-// LIRE BASE CLOUD
-// =========================================================
-
-async function lireBaseCloud() {
-
-    const res =
-        await fetch(
-            `${JSONBIN_URL}/latest`,
-            {
-                headers: {
-                    "X-Master-Key": MASTER_KEY
-                },
-                cache: "no-store"
-            }
-        );
-
-
-    if (!res.ok) {
-
-        throw new Error(
-            `JSONBin lecture HTTP ${res.status}`
-        );
-    }
-
-
-    const paquet =
-        await res.json();
-
-
-    return paquet.record || paquet || {};
+/* ---------------- AJOUT / SUPPRESSION EXTRAS ---------------- */
+async function ajouterNouveauRepas(){
+const input=document.getElementById("nouveauRepasNom"),nom=input.value.trim();
+if(!nom)return;
+if(repasExisteDansExtras(nom)){alert("Ce repas est déjà dans les extras.");return;}
+document.getElementById("loading").style.display="block";
+donneesFamille.extras.push({nom,ing:""});input.value="";
+await sauvegarderEtAfficher();
+}
+function repasExisteDansExtras(nom){
+return donneesFamille.extras.some(e=>normaliserNom(e.nom)===normaliserNom(nom));
+}
+async function supprimerExtra(idx){
+if(!donneesFamille.extras[idx])return;
+const nom=donneesFamille.extras[idx].nom;
+if(!confirm(`Supprimer « ${nom} » des extras ?`))return;
+donneesFamille.extras.splice(idx,1);
+await sauvegarderEtAfficher();
 }
 
+/* ============================================================
+   REMPLACEMENT — CORRECTION DU BUG
+   ============================================================ */
+function ouvrirRemplacement(sIdx,rIdx){
+sIdxSelectionne=sIdx;rIdxSelectionne=rIdx;
+document.getElementById("recherche-repas").value="";
+document.getElementById("box-remplacement").style.display="block";
+afficherChoixRemplacement();
+setTimeout(()=>document.getElementById("recherche-repas").focus(),50);
+}
+function fermerRemplacement(){document.getElementById("box-remplacement").style.display="none";}
 
-// =========================================================
-// SAUVEGARDER BASE CLOUD
-// =========================================================
-
-async function sauvegarderBaseCloud(baseC) {
-
-    const res =
-        await fetch(
-            JSONBIN_URL,
-            {
-                method: "PUT",
-
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-Master-Key": MASTER_KEY
-                },
-
-                body: JSON.stringify(baseC)
-            }
-        );
-
-
-    if (!res.ok) {
-
-        const detail =
-            await res.text();
-
-        throw new Error(
-            `JSONBin sauvegarde HTTP ${res.status}: ${detail}`
-        );
-    }
+function normaliserNom(nom){
+return (nom||"").toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
+function repasDansSemaine(nom){
+for(let s=0;s<donneesFamille.semaines.length;s++){
+for(let r=0;r<donneesFamille.semaines[s].length;r++){
+if(normaliserNom(donneesFamille.semaines[s][r]?.nom)===normaliserNom(nom))return{s,r};
+}
+}
+return null;
+}
+function repasDansExtras(nom){
+return donneesFamille.extras.some(e=>normaliserNom(e.nom)===normaliserNom(nom));
 }
 
-
-// =========================================================
-// AUTHENTIFICATION
-// =========================================================
-
-async function authentifierFamille() {
-
-    const s =
-        document
-            .getElementById("input-code-famille")
-            .value
-            .trim()
-            .toLowerCase();
-
-
-    const password =
-        document
-            .getElementById("input-password-famille")
-            .value;
-
-
-    // Vérification format courriel
-
-    const emailRegex =
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-
-    if (!emailRegex.test(s)) {
-
-        alert(
-            "Veuillez entrer une adresse courriel valide."
-        );
-
-        return;
-    }
-
-
-    if (password.length < 8) {
-
-        alert(
-            "Le mot de passe doit contenir au moins 8 caractères."
-        );
-
-        return;
-    }
-
-
-    const btn =
-        document.getElementById(
-            "btn-login-action"
-        );
-
-
-    btn.disabled = true;
-
-
-    try {
-
-        const baseC =
-            await lireBaseCloud();
-
-
-        const famille =
-            baseC[s];
-
-
-        // -------------------------------------------------
-        // CRÉATION
-        // -------------------------------------------------
-
-        if (modeCreationFamille) {
-
-            const confirmation =
-                document
-                    .getElementById(
-                        "input-password-confirm"
-                    )
-                    .value;
-
-
-            if (password !== confirmation) {
-
-                alert(
-                    "Les deux mots de passe ne correspondent pas."
-                );
-
-                return;
-            }
-
-
-            if (famille) {
-
-                alert(
-                    "Cette famille existe déjà. Veuillez choisir un autre nom."
-                );
-
-                return;
-            }
-
-
-            codeFamilleActif = s;
-
-
-            initialiserDonnees();
-
-
-            baseC[s] = {
-
-                passwordHash:
-                    await hacherMotDePasse(password),
-
-                semaines:
-                    donneesFamille.semaines,
-
-                extras:
-                    donneesFamille.extras
-
-            };
-
-
-            await sauvegarderBaseCloud(baseC);
-
-
-            localStorage.setItem(
-                "code_famille_sauve",
-                s
-            );
-
-
-            localStorage.setItem(
-                "session_famille_auth",
-                "1"
-            );
-
-
-            modeCreationFamille = false;
-
-
-            await chargerMenuDepuisCloud();
-
-
-            return;
-        }
-
-
-        // -------------------------------------------------
-        // FAMILLE INEXISTANTE
-        // -------------------------------------------------
-
-        if (!famille) {
-
-            alert(
-                "Cette famille n'existe pas. Cliquez sur « Créer une nouvelle famille » pour la créer."
-            );
-
-            return;
-        }
-
-
-        // -------------------------------------------------
-        // ANCIENNE VERSION
-        // -------------------------------------------------
-
-        if (!famille.passwordHash) {
-
-            alert(
-                "Cette famille a été créée avec l'ancienne version et n'a pas encore de mot de passe."
-            );
-
-            return;
-        }
-
-
-        // -------------------------------------------------
-        // VALIDATION MOT DE PASSE
-        // -------------------------------------------------
-
-        const hash =
-            await hacherMotDePasse(password);
-
-
-        if (hash !== famille.passwordHash) {
-
-            alert(
-                "Mot de passe incorrect."
-            );
-
-            return;
-        }
-
-
-        codeFamilleActif = s;
-
-
-        localStorage.setItem(
-            "code_famille_sauve",
-            s
-        );
-
-
-        localStorage.setItem(
-            "session_famille_auth",
-            "1"
-        );
-
-
-        await chargerMenuDepuisCloud();
-
-
-    } catch (err) {
-
-        console.error(
-            "Erreur de connexion JSONBin:",
-            err
-        );
-
-
-        alert(
-            "Impossible de communiquer avec le cloud. Vérifiez votre connexion."
-        );
-
-
-    } finally {
-
-        btn.disabled = false;
-    }
+/*
+IMPORTANT :
+- Un repas présent dans les Extras est EXCLU de « Repas disponibles ».
+- Le repas actuellement sélectionné est EXCLU.
+- Un repas déjà dans une autre semaine reste disponible : le clic provoque
+  un échange entre les deux semaines.
+- Un repas de la banque de base qui n'est nulle part peut être choisi ;
+  l'ancien repas devient alors un Extra.
+*/
+function obtenirRepasDisponibles(){
+const actuel=donneesFamille.semaines[sIdxSelectionne]?.[rIdxSelectionne]?.nom||"";
+const extrasNoms=new Set(donneesFamille.extras.map(e=>normaliserNom(e.nom)));
+const candidats=[...R_BASE,...E_BASE];
+const uniques=[];
+const vus=new Set();
+candidats.forEach(nom=>{
+const key=normaliserNom(nom);
+if(vus.has(key)||key===normaliserNom(actuel)||extrasNoms.has(key))return;
+vus.add(key);uniques.push(nom);
+});
+return uniques;
+}
+function afficherChoixRemplacement(){
+const recherche=normaliserNom(document.getElementById("recherche-repas").value);
+let html="";
+let disponibles=obtenirRepasDisponibles().filter(n=>normaliserNom(n).includes(recherche));
+html+='<div class="section-title">📚 REPAS DISPONIBLES</div>';
+if(disponibles.length){
+disponibles.forEach(nom=>{
+html+=`<div class="choice" onclick="choisirRepasDisponible(${JSON.stringify(nom)})"><span class="icon">➕</span><span>${escapeHtml(nom)}</span></div>`;
+});
+}else html+='<div class="empty">Aucun repas disponible.</div>';
+
+let extras=donneesFamille.extras.filter(e=>normaliserNom(e.nom).includes(recherche));
+html+='<div class="section-title">⭐ EXTRAS</div>';
+if(extras.length){
+extras.forEach((ex,idx)=>{
+const vraiIdx=donneesFamille.extras.indexOf(ex);
+html+=`<div class="choice-extra"><div class="choice" onclick="choisirExtra(${vraiIdx})"><span class="icon">⭐</span><span>${escapeHtml(ex.nom)}</span></div><button class="btn-delete-modal" onclick="event.stopPropagation();supprimerExtraDepuisModal(${vraiIdx})">🗑️</button></div>`;
+});
+}else html+='<div class="empty">Aucun extra correspondant.</div>';
+document.getElementById("remplacement-liste").innerHTML=html;
+}
+function escapeHtml(t){
+return String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+async function supprimerExtraDepuisModal(idx){
+if(!donneesFamille.extras[idx])return;
+const nom=donneesFamille.extras[idx].nom;
+if(!confirm(`Supprimer « ${nom} » des extras ?`))return;
+donneesFamille.extras.splice(idx,1);
+await sauvegarderEtAfficher(false);
+afficherChoixRemplacement();
+}
+async function choisirExtra(extraIdx){
+if(!donneesFamille.extras[extraIdx])return;
+document.getElementById("loading").style.display="block";
+try{
+const actuel=donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne];
+const choisi=donneesFamille.extras[extraIdx];
+// Échange réel : l'Extra entre dans la semaine et l'ancien repas devient l'Extra.
+// Il ne reste donc JAMAIS une deuxième copie du repas choisi.
+donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne]=choisi;
+donneesFamille.extras.splice(extraIdx,1);
+donneesFamille.extras.push(actuel);
+fermerRemplacement();
+await pousserVersCloud();
+afficherInterface();
+}catch(e){console.error(e);alert("La sauvegarde a échoué.");}
+finally{document.getElementById("loading").style.display="none";}
+}
+async function choisirRepasDisponible(nom){
+document.getElementById("loading").style.display="block";
+try{
+const actuel=donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne];
+const position=repasDansSemaine(nom);
+if(position && !(position.s===sIdxSelectionne&&position.r===rIdxSelectionne)){
+// Le repas est déjà dans une autre semaine : échange direct.
+const autre=donneesFamille.semaines[position.s][position.r];
+donneesFamille.semaines[position.s][position.r]=actuel;
+donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne]=autre;
+}else{
+// Repas de la banque qui n'est actuellement nulle part.
+// L'ancien repas devient un Extra.
+donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne]={nom,ing:""};
+// Sécurité supplémentaire : si jamais le nom existe dans les Extras,
+// on le retire avant d'ajouter l'ancien repas.
+donneesFamille.extras=donneesFamille.extras.filter(e=>normaliserNom(e.nom)!==normaliserNom(nom));
+donneesFamille.extras.push(actuel);
+}
+fermerRemplacement();
+await pousserVersCloud();
+afficherInterface();
+}catch(e){console.error(e);alert("La sauvegarde a échoué.");}
+finally{document.getElementById("loading").style.display="none";}
 }
 
+/* ---------------- AFFICHAGE ---------------- */
+function afficherInterface(){
+let html="";
+donneesFamille.semaines.forEach((sem,s)=>{
+html+=`<div class="card"><div><h3>Semaine ${s+1}</h3>`;
+sem.forEach((repas,r)=>{
+const nom=repas?.nom||"Repas libre";
+html+=`<div class="repas-block"><div class="repas-header">
+<span class="repas-nom" onclick="ouvrirIngredients('semaine',${s},${r},0)">${escapeHtml(nom)}</span>
+<button class="btn-remplacer" title="Remplacer ce repas" onclick="ouvrirRemplacement(${s},${r})">🔄</button>
+</div></div>`;
+});
+html+=`</div><button class="btn-epicerie" onclick="genererEpicerieSemaine(${s})">🛒 Liste d'épicerie</button></div>`;
+});
+document.getElementById("menu-grid").innerHTML=html;
 
-// =========================================================
-// CHARGER MENU CLOUD
-// =========================================================
-
-async function chargerMenuDepuisCloud() {
-
-    document
-        .getElementById("loading")
-        .style.display = "block";
-
-
-    try {
-
-        const baseC =
-            await lireBaseCloud();
-
-
-        const famille =
-            baseC[codeFamilleActif];
-
-
-        if (!famille) {
-
-            throw new Error(
-                "Famille introuvable."
-            );
-        }
-
-
-        donneesFamille.semaines =
-            famille.semaines || [];
-
-
-        donneesFamille.extras =
-            famille.extras || [];
-
-
-        document
-            .getElementById("ecran-login")
-            .style.display = "none";
-
-
-        document
-            .getElementById("ecran-principal")
-            .style.display = "block";
-
-
-        document
-            .getElementById("affichage-code-actif")
-            .innerText =
-            codeFamilleActif.toUpperCase();
-
-
-        afficherInterface();
-
-
-    } catch(err) {
-
-        console.error(
-            "Erreur de lecture JSONBin:",
-            err
-        );
-
-
-        localStorage.removeItem(
-            "session_famille_auth"
-        );
-
-
-        document
-            .getElementById("ecran-login")
-            .style.display = "block";
-
-
-        document
-            .getElementById("ecran-principal")
-            .style.display = "none";
-
-
-        alert(
-            "Impossible de charger les données de cette famille."
-        );
-
-
-    } finally {
-
-        document
-            .getElementById("loading")
-            .style.display = "none";
-    }
+let exHtml="";
+donneesFamille.extras.forEach((ex,idx)=>{
+if(!ex||!ex.nom)return;
+exHtml+=`<div class="extra-wrap"><div class="extra-item" onclick="ouvrirIngredients('extra',0,0,${idx})">⭐ ${escapeHtml(ex.nom)}</div><button class="btn-delete-extra" title="Supprimer" onclick="supprimerExtra(${idx})">🗑️</button></div>`;
+});
+document.getElementById("extras-liste").innerHTML=exHtml||'<div class="empty">Aucun repas dans les extras.</div>';
+}
+async function sauvegarderEtAfficher(fermer=true){
+document.getElementById("loading").style.display="block";
+try{await pousserVersCloud();afficherInterface();if(fermer)fermerRemplacement();}
+catch(e){console.error(e);alert("La sauvegarde dans le cloud a échoué.");}
+finally{document.getElementById("loading").style.display="none";}
 }
 
-
-// =========================================================
-// INITIALISER DONNÉES
-// =========================================================
-
-function initialiserDonnees() {
-
-    donneesFamille.semaines =
-        [[], [], [], [], [], []];
-
-
-    for (let s = 0; s < 6; s++) {
-
-        for (let r = 0; r < 4; r++) {
-
-            donneesFamille.semaines[s].push({
-
-                nom:
-                    R_BASE[s * 4 + r],
-
-                ing: ""
-
-            });
-
-        }
-
-    }
-
-
-    donneesFamille.extras =
-        E_BASE.map(n => ({
-            nom: n,
-            ing: ""
-        }));
+/* ---------------- INGREDIENTS ---------------- */
+function ouvrirIngredients(type,s,r,extraIdx){
+typePlatSelectionne=type;sIdxSelectionne=s;rIdxSelectionne=r;extraIdxSelectionne=extraIdx;
+const plat=type==="semaine"?donneesFamille.semaines[s][r]:donneesFamille.extras[extraIdx];
+document.getElementById("ingredients-titre").innerText=plat?.nom||"Ingrédients";
+document.getElementById("modal-texte").value=plat?.ing||"";
+document.getElementById("box-ingredients").style.display="block";
+}
+function fermerFenetre(){document.getElementById("box-ingredients").style.display="none";}
+async function sauverIngredients(){
+const txt=document.getElementById("modal-texte").value.trim();
+if(typePlatSelectionne==="semaine")donneesFamille.semaines[sIdxSelectionne][rIdxSelectionne].ing=txt;
+else if(donneesFamille.extras[extraIdxSelectionne])donneesFamille.extras[extraIdxSelectionne].ing=txt;
+fermerFenetre();await sauvegarderEtAfficher(false);
 }
 
+/* ---------------- ÉPICERIE ---------------- */
+function genererEpicerieSemaine(sIdx){
+document.getElementById("epicerie-titre").innerText=`🛒 Liste d'épicerie - Semaine ${sIdx+1}`;
+let txt="";
+donneesFamille.semaines[sIdx].forEach(r=>{
+if(r?.nom)txt+=`🔹 ${r.nom.toUpperCase()} :\n${r.ing?.trim()||"(Aucun ingrédient inscrit)"}\n\n-----------------------\n\n`;
+});
+document.getElementById("epicerie-corps").innerText=txt;
+document.getElementById("box-epicerie").style.display="block";
+}
+function fermerEpicerie(){document.getElementById("box-epicerie").style.display="none";}
 
-// =========================================================
-// POUSSER VERS CLOUD
-// =========================================================
-
-async function pousserVersCloud() {
-
-    try {
-
-        const baseC =
-            await lireBaseCloud();
-
-
-        const ancienneFamille =
-            baseC[codeFamilleActif];
-
-
-        if (!ancienneFamille) {
-
-            throw new Error(
-                "Famille introuvable."
-            );
-        }
-
-
-        baseC[codeFamilleActif] = {
-
-            passwordHash:
-                ancienneFamille.passwordHash,
-
-            semaines:
-                donneesFamille.semaines,
-
-            extras:
-                donneesFamille.extras
-
-        };
-
-
-        await sauvegarderBaseCloud(baseC);
-
-
-    } catch(e) {
-
-        console.error(
-            "Erreur de synchronisation JSONBin:",
-            e
-        );
-
-
-        alert(
-            "La sauvegarde dans le cloud a échoué."
-        );
-
-
-        throw e;
-    }
+/* ---------------- MOT DE PASSE ---------------- */
+function ouvrirChangementMotDePasse(){document.getElementById("box-motdepasse").style.display="block";}
+function fermerChangementMotDePasse(){document.getElementById("box-motdepasse").style.display="none";}
+async function changerMotDePasse(){
+const ancien=document.getElementById("ancien-password").value;
+const nouveau=document.getElementById("nouveau-password").value;
+const confirmation=document.getElementById("nouveau-password-confirm").value;
+if(nouveau.length<8){alert("Le nouveau mot de passe doit contenir au moins 8 caractères.");return;}
+if(nouveau!==confirmation){alert("Les deux nouveaux mots de passe ne correspondent pas.");return;}
+try{
+const base=await lireBaseCloud(),famille=base[codeFamilleActif];
+if(!famille){alert("Famille introuvable.");return;}
+if(await hacherMotDePasse(ancien)!==famille.passwordHash){alert("Mot de passe actuel incorrect.");return;}
+famille.passwordHash=await hacherMotDePasse(nouveau);
+await sauvegarderBaseCloud(base);
+fermerChangementMotDePasse();
+document.getElementById("ancien-password").value="";
+document.getElementById("nouveau-password").value="";
+document.getElementById("nouveau-password-confirm").value="";
+alert("Votre mot de passe a été modifié avec succès.");
+}catch(e){console.error(e);alert("Impossible de modifier le mot de passe.");}
 }
 
-
-// =========================================================
-// AJOUTER NOUVEAU REPAS AUX EXTRAS
-// =========================================================
-
-async function ajouterNouveauRepas() {
-
-    let nomInput =
-        document.getElementById(
-            "nouveauRepasNom"
-        );
-
-
-    let nom =
-        nomInput.value.trim();
-
-
-    if (nom === "") return;
-
-
-    document
-        .getElementById("loading")
-        .style.display = "block";
-
-
-    try {
-
-        donneesFamille.extras.push({
-
-            nom: nom,
-
-            ing: ""
-
-        });
-
-
-        nomInput.value = "";
-
-
-        afficherInterface();
-
-
-        await pousserVersCloud();
-
-    } catch(e) {
-
-        console.error(e);
-
-    } finally {
-
-        document
-            .getElementById("loading")
-            .style.display = "none";
-    }
+/* ---------------- DÉCONNEXION ---------------- */
+function deconnexion(){
+localStorage.removeItem("code_famille_sauve");
+localStorage.removeItem("session_famille_auth");
+codeFamilleActif="";location.reload();
 }
-
-
-// =========================================================
-// OUVRIR FENÊTRE REMPLACEMENT
-// =========================================================
-
-function ouvrirRemplacement(sIdx, rIdx) {
-
-    sIdxRemplacement = sIdx;
-
-    rIdxRemplacement = rIdx;
-
-
-    const recherche =
-        document.getElementById(
-            "recherche-repas"
-        );
-
-
-    recherche.value = "";
-
-
-    document
-        .getElementById(
-            "box-remplacement"
-        )
-        .style.display = "block";
-
-
-    afficherListeRemplacement();
-
-
-    setTimeout(() => {
-
-        recherche.focus();
-
-    }, 100);
-}
-
-
-// =========================================================
-// FERMER FENÊTRE REMPLACEMENT
-// =========================================================
-
-function fermerFenetreRemplacement() {
-
-    document
-        .getElementById(
-            "box-remplacement"
-        )
-        .style.display = "none";
-
-
-    document
-        .getElementById(
-            "recherche-repas"
-        )
-        .value = "";
-}
-
-
-// =========================================================
-// ÉCHAPPER HTML
-// =========================================================
-
-function echapperHtml(texte) {
-
-    return String(texte)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-
-// =========================================================
-// AFFICHER LISTE DE REMPLACEMENT
-// =========================================================
-
-function afficherListeRemplacement() {
-
-    const recherche =
-        document
-            .getElementById(
-                "recherche-repas"
-            )
-            .value
-            .trim()
-            .toLowerCase();
-
-
-    const semaineActuelle =
-        donneesFamille
-            .semaines[sIdxRemplacement];
-
-
-    const repasActuel =
-        semaineActuelle
-            ? semaineActuelle[rIdxRemplacement]
-            : null;
-
-
-    let html = "";
-
-
-    // =====================================================
-    // INFORMATION
-    // =====================================================
-
-    html += `
-        <div class="remplacement-info">
-            💡 Si le repas choisi est déjà dans une autre semaine,
-            les deux repas seront automatiquement échangés.
-        </div>
-    `;
-
-
-    // =====================================================
-    // REPAS DES SEMAINES
-    // =====================================================
-
-    donneesFamille
-        .semaines
-        .forEach((sem, sIdx) => {
-
-            const repasFiltres =
-                sem
-                    .map((repas, rIdx) => ({
-                        repas,
-                        sIdx,
-                        rIdx
-                    }))
-                    .filter(item =>
-                        item.repas &&
-                        item.repas.nom &&
-                        item.repas.nom
-                            .toLowerCase()
-                            .includes(recherche)
-                    );
-
-
-            if (repasFiltres.length === 0) {
-                return;
-            }
-
-
-            html += `
-                <div class="remplacement-section-titre">
-                    📅 Semaine ${sIdx + 1}
-                </div>
-            `;
-
-
-            repasFiltres.forEach(item => {
-
-                const estActuel =
-                    item.sIdx === sIdxRemplacement &&
-                    item.rIdx === rIdxRemplacement;
-
-
-                html += `
-                    <div class="remplacement-item">
-
-                        <button
-                            class="btn-choisir-repas ${estActuel ? "repas-actuel" : ""}"
-                            data-type="semaine"
-                            data-sidx="${item.sIdx}"
-                            data-ridx="${item.rIdx}"
-                            ${estActuel ? "disabled" : ""}>
-
-                            ${estActuel ? "📍 " : "🔄 "}
-                            ${echapperHtml(item.repas.nom)}
-
-                            ${
-                                estActuel
-                                ? " (repas actuel)"
-                                : ""
-                            }
-
-                        </button>
-
-                    </div>
-                `;
-            });
-
-        });
-
-
-    // =====================================================
-    // BANQUE DE REPAS
-    //
-    // On affiche les repas de la banque qui ne sont PAS
-    // déjà présents dans les semaines.
-    //
-    // Ceux qui sont déjà dans une semaine sont accessibles
-    // directement dans la section de cette semaine.
-    // =====================================================
-
-    const nomsDansSemaines =
-        new Set();
-
-
-    donneesFamille
-        .semaines
-        .forEach(sem => {
-
-            sem.forEach(repas => {
-
-                if (
-                    repas &&
-                    repas.nom
-                ) {
-
-                    nomsDansSemaines.add(
-                        repas.nom.toLowerCase()
-                    );
-
-                }
-
-            });
-
-        });
-
-
-    const tousLesRepasBase =
-        [...R_BASE, ...E_BASE];
-
-
-    const repasBaseFiltres =
-        tousLesRepasBase
-            .filter(nom =>
-                nom
-                    .toLowerCase()
-                    .includes(recherche)
-            )
-            .filter(nom =>
-                !nomsDansSemaines.has(
-                    nom.toLowerCase()
-                )
-            );
-
-
-    if (repasBaseFiltres.length > 0) {
-
-        html += `
-            <div class="remplacement-section-titre">
-                📚 Repas disponibles
-            </div>
-        `;
-
-
-        repasBaseFiltres.forEach(nom => {
-
-            html += `
-                <div class="remplacement-item">
-
-                    <button
-                        class="btn-choisir-repas"
-                        data-type="base"
-                        data-nom="${encodeURIComponent(nom)}">
-
-                        ➕ ${echapperHtml(nom)}
-
-                    </button>
-
-                </div>
-            `;
-
-        });
-
-    }
-
-
-    // =====================================================
-    // EXTRAS
-    // =====================================================
-
-    const extrasFiltres =
-        donneesFamille.extras
-
-            .map((repas, index) => ({
-                repas,
-                index
-            }))
-
-            .filter(item =>
-                item.repas &&
-                item.repas.nom &&
-                item.repas.nom
-                    .toLowerCase()
-                    .includes(recherche)
-            );
-
-
-    if (extrasFiltres.length > 0) {
-
-        html += `
-            <div class="remplacement-section-titre">
-                ⭐ Extras
-            </div>
-        `;
-
-
-        extrasFiltres.forEach(item => {
-
-            html += `
-                <div class="remplacement-item">
-
-                    <button
-                        class="btn-choisir-repas"
-                        data-type="extra"
-                        data-index="${item.index}">
-
-                        ⭐ ${echapperHtml(item.repas.nom)}
-
-                    </button>
-
-
-                    <button
-                        class="btn-supprimer-extra"
-                        data-delete-extra="${item.index}"
-                        title="Supprimer définitivement">
-
-                        🗑️
-
-                    </button>
-
-                </div>
-            `;
-
-        });
-
-    }
-
-
-    // =====================================================
-    // AUCUN RÉSULTAT
-    // =====================================================
-
-    if (
-        html ===
-        `
-        <div class="remplacement-info">
-            💡 Si le repas choisi est déjà dans une autre semaine,
-            les deux repas seront automatiquement échangés.
-        </div>
-    `
-    ) {
-
-        html = `
-            <div class="remplacement-vide">
-                Aucun repas trouvé.
-            </div>
-        `;
-    }
-
-
-    document
-        .getElementById(
-            "liste-remplacement"
-        )
-        .innerHTML =
-        html;
-
-
-    // =====================================================
-    // CLIC SUR UN REPAS
-    // =====================================================
-
-    document
-        .querySelectorAll(
-            ".btn-choisir-repas"
-        )
-        .forEach(btn => {
-
-            btn.addEventListener(
-                "click",
-                async () => {
-
-                    const type =
-                        btn.dataset.type;
-
-
-                    if (type === "semaine") {
-
-                        const autreSIdx =
-                            parseInt(
-                                btn.dataset.sidx,
-                                10
-                            );
-
-
-                        const autreRIdx =
-                            parseInt(
-                                btn.dataset.ridx,
-                                10
-                            );
-
-
-                        await remplacerParRepasSemaine(
-                            autreSIdx,
-                            autreRIdx
-                        );
-
-                    }
-
-
-                    else if (type === "base") {
-
-                        const nom =
-                            decodeURIComponent(
-                                btn.dataset.nom
-                            );
-
-
-                        await remplacerParRepasBase(
-                            nom
-                        );
-
-                    }
-
-
-                    else if (type === "extra") {
-
-                        const index =
-                            parseInt(
-                                btn.dataset.index,
-                                10
-                            );
-
-
-                        await remplacerParExtra(
-                            index
-                        );
-
-                    }
-
-                }
-            );
-
-        });
-
-
-    // =====================================================
-    // SUPPRESSION DES EXTRAS
-    // =====================================================
-
-    document
-        .querySelectorAll(
-            "[data-delete-extra]"
-        )
-        .forEach(btn => {
-
-            btn.addEventListener(
-                "click",
-                async (e) => {
-
-                    e.stopPropagation();
-
-
-                    const index =
-                        parseInt(
-                            btn.dataset.deleteExtra,
-                            10
-                        );
-
-
-                    await supprimerExtra(
-                        index
-                    );
-
-                }
-            );
-
-        });
-}
-
-
-// =========================================================
-// REMPLACER PAR UN REPAS D'UNE AUTRE SEMAINE
-// =========================================================
-
-async function remplacerParRepasSemaine(
-    autreSIdx,
-    autreRIdx
-) {
-
-    // Protection contre le clic sur le repas actuel
-
-    if (
-        autreSIdx === sIdxRemplacement &&
-        autreRIdx === rIdxRemplacement
-    ) {
-
-        fermerFenetreRemplacement();
-
-        return;
-    }
-
-
-    const repasActuel =
-        donneesFamille
-            .semaines[sIdxRemplacement]
-            [rIdxRemplacement];
-
-
-    const autreRepas =
-        donneesFamille
-            .semaines[autreSIdx]
-            [autreRIdx];
-
-
-    if (!repasActuel || !autreRepas) {
-
-        return;
-    }
-
-
-    document
-        .getElementById("loading")
-        .style.display = "block";
-
-
-    try {
-
-        // =================================================
-        // VRAI ÉCHANGE
-        // =================================================
-
-        donneesFamille
-            .semaines[sIdxRemplacement]
-            [rIdxRemplacement] =
-            autreRepas;
-
-
-        donneesFamille
-            .semaines[autreSIdx]
-            [autreRIdx] =
-            repasActuel;
-
-
-        fermerFenetreRemplacement();
-
-
-        afficherInterface();
-
-
-        await pousserVersCloud();
-
-
-    } catch (e) {
-
-        console.error(
-            "Erreur lors de l'échange des repas :",
-            e
-        );
-
-
-        alert(
-            "Impossible d'échanger les repas."
-        );
-
-
-    } finally {
-
-        document
-            .getElementById("loading")
-            .style.display = "none";
-    }
-}
-
-
-// =========================================================
-// TROUVER UN REPAS DANS LES SEMAINES
-// =========================================================
-
-function trouverRepasDansSemaines(
-    nomRepas,
-    ignorerSIdx = -1,
-    ignorerRIdx = -1
-) {
-
-    const nomRecherche =
-        nomRepas
-            .trim()
-            .toLowerCase();
-
-
-    for (
-        let sIdx = 0;
-        sIdx < donneesFamille.semaines.length;
-        sIdx++
-    ) {
-
-        const semaine =
-            donneesFamille.semaines[sIdx];
-
-
-        for (
-            let rIdx = 0;
-            rIdx < semaine.length;
-            rIdx++
-        ) {
-
-            if (
-                sIdx === ignorerSIdx &&
-                rIdx === ignorerRIdx
-            ) {
-                continue;
-            }
-
-
-            const repas =
-                semaine[rIdx];
-
-
-            if (
-                repas &&
-                repas.nom &&
-                repas.nom
-                    .trim()
-                    .toLowerCase() === nomRecherche
-            ) {
-
-                return {
-                    sIdx,
-                    rIdx
-                };
-
-            }
-
-        }
-
-    }
-
-
-    return null;
-}
-
-
-// =========================================================
-// REMPLACER PAR UN REPAS DE LA BANQUE PRINCIPALE
-// =========================================================
-
-async function remplacerParRepasBase(
-    nomNouveauRepas
-) {
-
-    const repasActuel =
-        donneesFamille
-            .semaines[sIdxRemplacement]
-            [rIdxRemplacement];
-
-
-    // Même repas
-
-    if (
-        repasActuel &&
-        repasActuel.nom === nomNouveauRepas
-    ) {
-
-        fermerFenetreRemplacement();
-
-        return;
-    }
-
-
-    // =====================================================
-    // IMPORTANT :
-    // Si ce repas existe déjà dans une autre semaine,
-    // on fait un échange au lieu de créer un doublon.
-    // =====================================================
-
-    const positionExistante =
-        trouverRepasDansSemaines(
-            nomNouveauRepas,
-            sIdxRemplacement,
-            rIdxRemplacement
-        );
-
-
-    if (positionExistante) {
-
-        await remplacerParRepasSemaine(
-            positionExistante.sIdx,
-            positionExistante.rIdx
-        );
-
-        return;
-    }
-
-
-    document
-        .getElementById("loading")
-        .style.display = "block";
-
-
-    try {
-
-        // =================================================
-        // Aucun autre exemplaire dans les semaines.
-        //
-        // On garde donc l'ancien comportement :
-        // l'ancien repas devient un Extra.
-        // =================================================
-
-        if (
-            repasActuel &&
-            repasActuel.nom
-        ) {
-
-            donneesFamille.extras.push({
-
-                nom:
-                    repasActuel.nom,
-
-                ing:
-                    repasActuel.ing || ""
-
-            });
-
-        }
-
-
-        // =================================================
-        // Nouveau repas
-        // =================================================
-
-        donneesFamille
-            .semaines[sIdxRemplacement]
-            [rIdxRemplacement] = {
-
-                nom:
-                    nomNouveauRepas,
-
-                ing: ""
-
-            };
-
-
-        fermerFenetreRemplacement();
-
-
-        afficherInterface();
-
-
-        await pousserVersCloud();
-
-
-    } catch (e) {
-
-        console.error(
-            "Erreur lors du remplacement :",
-            e
-        );
-
-
-        alert(
-            "Impossible de remplacer le repas."
-        );
-
-
-    } finally {
-
-        document
-            .getElementById("loading")
-            .style.display = "none";
-    }
-}
-
-
-// =========================================================
-// REMPLACER PAR UN EXTRA
-// =========================================================
-
-async function remplacerParExtra(
-    extraIdx
-) {
-
-    const repasActuel =
-        donneesFamille
-            .semaines[sIdxRemplacement]
-            [rIdxRemplacement];
-
-
-    const nouveauRepas =
-        donneesFamille
-            .extras[extraIdx];
-
-
-    if (!nouveauRepas) return;
-
-
-    // Même repas
-
-    if (
-        repasActuel &&
-        repasActuel.nom === nouveauRepas.nom
-    ) {
-
-        fermerFenetreRemplacement();
-
-        return;
-    }
-
-
-    document
-        .getElementById("loading")
-        .style.display = "block";
-
-
-    try {
-
-        // =================================================
-        // Vérifier si l'Extra existe déjà dans une semaine.
-        //
-        // Normalement ce ne devrait pas arriver, mais cette
-        // protection empêche aussi la création de doublons.
-        // =================================================
-
-        const positionExistante =
-            trouverRepasDansSemaines(
-                nouveauRepas.nom,
-                sIdxRemplacement,
-                rIdxRemplacement
-            );
-
-
-        if (positionExistante) {
-
-            // On retire l'Extra de sa banque
-
-            donneesFamille.extras.splice(
-                extraIdx,
-                1
-            );
-
-
-            // Échange avec le repas existant
-
-            const repasDansAutreSemaine =
-                donneesFamille
-                    .semaines[positionExistante.sIdx]
-                    [positionExistante.rIdx];
-
-
-            donneesFamille
-                .semaines[sIdxRemplacement]
-                [rIdxRemplacement] =
-                repasDansAutreSemaine;
-
-
-            donneesFamille
-                .semaines[positionExistante.sIdx]
-                [positionExistante.rIdx] =
-                repasActuel;
-
-
-        } else {
-
-            // =================================================
-            // Retirer le repas choisi des Extras
-            // =================================================
-
-            donneesFamille.extras.splice(
-                extraIdx,
-                1
-            );
-
-
-            // =================================================
-            // Ancien repas devient un Extra
-            // =================================================
-
-            if (
-                repasActuel &&
-                repasActuel.nom
-            ) {
-
-                donneesFamille.extras.push({
-
-                    nom:
-                        repasActuel.nom,
-
-                    ing:
-                        repasActuel.ing || ""
-
-                });
-
-            }
-
-
-            // =================================================
-            // Placer le nouveau repas dans la semaine
-            // =================================================
-
-            donneesFamille
-                .semaines[sIdxRemplacement]
-                [rIdxRemplacement] =
-                nouveauRepas;
-
-        }
-
-
-        fermerFenetreRemplacement();
-
-
-        afficherInterface();
-
-
-        await pousserVersCloud();
-
-
-    } catch (e) {
-
-        console.error(
-            "Erreur lors du remplacement :",
-            e
-        );
-
-
-        alert(
-            "Impossible de remplacer le repas."
-        );
-
-
-    } finally {
-
-        document
-            .getElementById("loading")
-            .style.display = "none";
-    }
-}
-
-
-// =========================================================
-// SUPPRIMER UN EXTRA
-// =========================================================
-
-async function supprimerExtra(
-    extraIdx
-) {
-
-    const repas =
-        donneesFamille.extras[extraIdx];
-
-
-    if (!repas) return;
-
-
-    const confirmation =
-        confirm(
-            `Voulez-vous vraiment supprimer définitivement « ${repas.nom} » des extras ?`
-        );
-
-
-    if (!confirmation) return;
-
-
-    document
-        .getElementById("loading")
-        .style.display = "block";
-
-
-    try {
-
-        donneesFamille.extras.splice(
-            extraIdx,
-            1
-        );
-
-
-        afficherInterface();
-
-
-        await pousserVersCloud();
-
-
-    } catch (e) {
-
-        console.error(
-            "Erreur lors de la suppression :",
-            e
-        );
-
-
-        alert(
-            "Impossible de supprimer ce repas."
-        );
-
-
-    } finally {
-
-        document
-            .getElementById("loading")
-            .style.display = "none";
-    }
-}
-
-
-// =========================================================
-// OUVRIR INGREDIENTS
-// =========================================================
-
-function abrirIngredients(
-    type,
-    s,
-    r,
-    exIdx
-) {
-
-    typePlatSelectionne = type;
-
-    sIdxSelectionne = s;
-
-    rIdxSelectionne = r;
-
-    extraIdxSelectionne = exIdx;
-
-
-    let plat =
-        (type === "semaine")
-
-            ? donneesFamille
-                .semaines[s][r]
-
-            : donneesFamille
-                .extras[exIdx];
-
-
-    if (!plat) return;
-
-
-    document
-        .getElementById(
-            "box-ingredients"
-        )
-        .querySelector("h2")
-        .innerText =
-        plat.nom;
-
-
-    document
-        .getElementById(
-            "modal-texte"
-        )
-        .value =
-        plat.ing || "";
-
-
-    document
-        .getElementById(
-            "box-ingredients"
-        )
-        .style.display =
-        "block";
-}
-
-
-// =========================================================
-// SAUVER INGREDIENTS
-// =========================================================
-
-async function sauverIngredients() {
-
-    let txt =
-        document
-            .getElementById(
-                "modal-texte"
-            )
-            .value
-            .trim();
-
-
-    document
-        .getElementById("loading")
-        .style.display =
-        "block";
-
-
-    try {
-
-        if (
-            typePlatSelectionne ===
-            "semaine"
-        ) {
-
-            donneesFamille
-                .semaines[sIdxSelectionne]
-                [rIdxSelectionne]
-                .ing = txt;
-
-        } else {
-
-            donneesFamille
-                .extras[extraIdxSelectionne]
-                .ing = txt;
-        }
-
-
-        fermerFenetre();
-
-
-        afficherInterface();
-
-
-        await pousserVersCloud();
-
-    } catch(e) {
-
-        console.error(e);
-
-    } finally {
-
-        document
-            .getElementById("loading")
-            .style.display =
-            "none";
-    }
-}
-
-
-// =========================================================
-// LISTE D'ÉPICERIE
-// =========================================================
-
-function genererEpicerieSemaine(
-    sIdx
-) {
-
-    document
-        .getElementById(
-            "epicerie-titre"
-        )
-        .innerText =
-        "🛒 Épicerie - Semaine " +
-        (sIdx + 1);
-
-
-    let txt = "";
-
-
-    donneesFamille
-        .semaines[sIdx]
-        .forEach(r => {
-
-            if (r && r.nom) {
-
-                txt +=
-                    "🔹 " +
-                    r.nom.toUpperCase() +
-                    " :\n" +
-
-                    (
-                        r.ing &&
-                        r.ing.trim() !== ""
-
-                        ? r.ing.trim() + "\n"
-
-                        : "(Aucun ingrédient inscrit)\n"
-                    ) +
-
-                    "\n-----------------------\n\n";
-            }
-
-        });
-
-
-    document
-        .getElementById(
-            "epicerie-corps"
-        )
-        .innerText = txt;
-
-
-    document
-        .getElementById(
-            "box-epicerie"
-        )
-        .style.display =
-        "block";
-}
-
-
-// =========================================================
-// CHANGEMENT MOT DE PASSE
-// =========================================================
-
-function ouvrirChangementMotDePasse() {
-
-    document
-        .getElementById(
-            "ancien-password"
-        )
-        .value = "";
-
-
-    document
-        .getElementById(
-            "nouveau-password"
-        )
-        .value = "";
-
-
-    document
-        .getElementById(
-            "nouveau-password-confirm"
-        )
-        .value = "";
-
-
-    document
-        .getElementById(
-            "box-motdepasse"
-        )
-        .style.display =
-        "block";
-}
-
-
-// =========================================================
-// FERMER CHANGEMENT MOT DE PASSE
-// =========================================================
-
-function fermerChangementMotDePasse() {
-
-    document
-        .getElementById(
-            "box-motdepasse"
-        )
-        .style.display =
-        "none";
-}
-
-
-// =========================================================
-// CHANGER MOT DE PASSE
-// =========================================================
-
-async function changerMotDePasse() {
-
-    const ancien =
-        document
-            .getElementById(
-                "ancien-password"
-            )
-            .value;
-
-
-    const nouveau =
-        document
-            .getElementById(
-                "nouveau-password"
-            )
-            .value;
-
-
-    const confirmation =
-        document
-            .getElementById(
-                "nouveau-password-confirm"
-            )
-            .value;
-
-
-    if (ancien.length < 8) {
-
-        alert(
-            "Le mot de passe actuel doit contenir au moins 8 caractères."
-        );
-
-        return;
-    }
-
-
-    if (nouveau.length < 8) {
-
-        alert(
-            "Le nouveau mot de passe doit contenir au moins 8 caractères."
-        );
-
-        return;
-    }
-
-
-    if (nouveau !== confirmation) {
-
-        alert(
-            "Les deux nouveaux mots de passe ne correspondent pas."
-        );
-
-        return;
-    }
-
-
-    if (ancien === nouveau) {
-
-        alert(
-            "Le nouveau mot de passe doit être différent de l'ancien."
-        );
-
-        return;
-    }
-
-
-    try {
-
-        const baseC =
-            await lireBaseCloud();
-
-
-        const famille =
-            baseC[codeFamilleActif];
-
-
-        if (
-            !famille ||
-            !famille.passwordHash
-        ) {
-
-            throw new Error(
-                "Famille ou mot de passe introuvable."
-            );
-        }
-
-
-        const ancienHash =
-            await hacherMotDePasse(
-                ancien
-            );
-
-
-        if (
-            ancienHash !==
-            famille.passwordHash
-        ) {
-
-            alert(
-                "Le mot de passe actuel est incorrect."
-            );
-
-            return;
-        }
-
-
-        famille.passwordHash =
-            await hacherMotDePasse(
-                nouveau
-            );
-
-
-        await sauvegarderBaseCloud(
-            baseC
-        );
-
-
-        fermerChangementMotDePasse();
-
-
-        alert(
-            "Votre mot de passe a été modifié avec succès."
-        );
-
-
-    } catch(e) {
-
-        console.error(
-            "Erreur de changement de mot de passe:",
-            e
-        );
-
-
-        alert(
-            "Impossible de modifier le mot de passe. Vérifiez votre connexion."
-        );
-    }
-}
-
-
-// =========================================================
-// DÉCONNEXION
-// =========================================================
-
-function deconnexion() {
-
-    try {
-
-        localStorage.removeItem(
-            "code_famille_sauve"
-        );
-
-        localStorage.removeItem(
-            "session_famille_auth"
-        );
-
-    } catch(e) {}
-
-
-    codeFamilleActif = "";
-
-
-    location.reload();
-}
-
-
-// =========================================================
-// FERMER FENÊTRES
-// =========================================================
-
-function fermerFenetre() {
-
-    document
-        .getElementById(
-            "box-ingredients"
-        )
-        .style.display =
-        "none";
-}
-
-
-function fermerEpicerie() {
-
-    document
-        .getElementById(
-            "box-epicerie"
-        )
-        .style.display =
-        "none";
-}
-
-
-// =========================================================
-// AFFICHER L'INTERFACE
-// =========================================================
-
-function afficherInterface() {
-
-    let gridHtml = "";
-
-
-    // =====================================================
-    // SEMAINES
-    // =====================================================
-
-    donneesFamille
-        .semaines
-        .forEach((sem, sIdx) => {
-
-            gridHtml +=
-                '<div class="card">' +
-
-                '<div>' +
-
-                '<h3>Semaine ' +
-                (sIdx + 1) +
-                '</h3>';
-
-
-            sem.forEach(
-                (repas, rIdx) => {
-
-                    let nomAff =
-                        (
-                            repas &&
-                            repas.nom
-                        )
-
-                        ? repas.nom
-
-                        : "Repas libre";
-
-
-                    gridHtml += `
-
-                        <div class="repas-block">
-
-                            <div class="repas-header">
-
-                                <span
-                                    class="repas-nom"
-                                    id="nom-${sIdx}-${rIdx}">
-                                    ${echapperHtml(nomAff)}
-                                </span>
-
-
-                                <button
-                                    class="select-echange"
-                                    id="sel-${sIdx}-${rIdx}"
-                                    type="button">
-                                    🔄 Remplacer
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    `;
-                }
-            );
-
-
-            gridHtml += `
-
-                </div>
-
-                <button
-                    class="btn-epicerie"
-                    id="btn-epi-${sIdx}">
-                    🛒 Liste d'épicerie
-                </button>
-
-            </div>
-
-            `;
-        });
-
-
-    document
-        .getElementById(
-            "menu-grid"
-        )
-        .innerHTML =
-        gridHtml;
-
-
-    // =====================================================
-    // ÉVÉNEMENTS SEMAINES
-    // =====================================================
-
-    donneesFamille
-        .semaines
-        .forEach(
-            (sem, sIdx) => {
-
-                sem.forEach(
-                    (repas, rIdx) => {
-
-                        const nomElement =
-                            document.getElementById(
-                                `nom-${sIdx}-${rIdx}`
-                            );
-
-
-                        const selectElement =
-                            document.getElementById(
-                                `sel-${sIdx}-${rIdx}`
-                            );
-
-
-                        if (nomElement) {
-
-                            nomElement
-                                .addEventListener(
-                                    "click",
-                                    () =>
-                                        abrirIngredients(
-                                            "semaine",
-                                            sIdx,
-                                            rIdx,
-                                            0
-                                        )
-                                );
-
-                        }
-
-
-                        if (selectElement) {
-
-                            selectElement
-                                .addEventListener(
-                                    "click",
-                                    () =>
-                                        ouvrirRemplacement(
-                                            sIdx,
-                                            rIdx
-                                        )
-                                );
-
-                        }
-
-                    }
-                );
-
-
-                const boutonEpicerie =
-                    document.getElementById(
-                        `btn-epi-${sIdx}`
-                    );
-
-
-                if (boutonEpicerie) {
-
-                    boutonEpicerie
-                        .addEventListener(
-                            "click",
-                            () =>
-                                genererEpicerieSemaine(
-                                    sIdx
-                                )
-                        );
-
-                }
-
-            }
-        );
-
-
-    // =====================================================
-    // EXTRAS
-    // =====================================================
-
-    let exHtml = "";
-
-
-    donneesFamille
-        .extras
-        .forEach(
-            (ex, exIdx) => {
-
-                if (
-                    ex &&
-                    ex.nom
-                ) {
-
-                    exHtml += `
-
-                        <div
-                            class="extra-item"
-                            id="ex-${exIdx}">
-
-                            <span
-                                class="extra-nom">
-                                ${echapperHtml(ex.nom)}
-                            </span>
-
-
-                            <button
-                                class="btn-supprimer-extra"
-                                data-index="${exIdx}"
-                                title="Supprimer ce repas">
-
-                                🗑️
-
-                            </button>
-
-                        </div>
-
-                    `;
-                }
-
-            }
-        );
-
-
-    document
-        .getElementById(
-            "extras-liste"
-        )
-        .innerHTML =
-        exHtml;
-
-
-    // =====================================================
-    // CLIC SUR EXTRA = INGRÉDIENTS
-    // =====================================================
-
-    donneesFamille
-        .extras
-        .forEach(
-            (ex, exIdx) => {
-
-                if (
-                    ex &&
-                    ex.nom
-                ) {
-
-                    const extraElement =
-                        document.getElementById(
-                            `ex-${exIdx}`
-                        );
-
-
-                    if (extraElement) {
-
-                        extraElement
-                            .addEventListener(
-                                "click",
-                                (e) => {
-
-                                    if (
-                                        e.target
-                                            .classList
-                                            .contains(
-                                                "btn-supprimer-extra"
-                                            )
-                                    ) {
-
-                                        return;
-                                    }
-
-
-                                    abrirIngredients(
-                                        "extra",
-                                        0,
-                                        0,
-                                        exIdx
-                                    );
-
-                                }
-                            );
-
-                    }
-
-                }
-
-            }
-        );
-
-
-    // =====================================================
-    // BOUTONS SUPPRIMER EXTRA
-    // =====================================================
-
-    document
-        .querySelectorAll(
-            ".btn-supprimer-extra"
-        )
-        .forEach(
-            btn => {
-
-                btn.addEventListener(
-                    "click",
-                    async (e) => {
-
-                        e.stopPropagation();
-
-
-                        const idx =
-                            parseInt(
-                                btn.dataset.index,
-                                10
-                            );
-
-
-                        await supprimerExtra(
-                            idx
-                        );
-
-                    }
-                );
-
-            }
-        );
-}
-
-
 </script>
-
 </body>
 </html>
